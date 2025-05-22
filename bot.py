@@ -72,5 +72,5 @@ if __name__ == '__main__':
         listen="0.0.0.0",
         port=PORT,
         url_path=TOKEN,
-        webhook_url=f"https://metalfencingbot-6.onrender.com/{TOKEN}"
+        webhook_url=f"https://metalfencingbot-6.onrender.com/ {TOKEN}"
     )
