@@ -1,21 +1,11 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 import os
-from flask import Flask
 
-# ========== Flask сервер для тестирования ==========
-flask_app = Flask(__name__)
-
-@flask_app.route('/')
-def home():
-    return "✅ Бот работает. Это тестовая страница."
-
-def run_flask():
-    flask_app.run(host='0.0.0.0', port=os.environ.get('PORT', 8000))
-
-# ========== Telegram-бот ==========
+# ========== ТОКЕН ==========
 TOKEN = '8159127478:AAHwjKl3zeZ3LZ4RgJgZ9X4Y1WOOKQFyZww'
 
+# ========== ДАННЫЕ О ТОВАРАХ ==========
 products = [
     {
         "id": "1",
@@ -39,6 +29,7 @@ products = [
     }
 ]
 
+# ========== ФОРМАТИРОВАНИЕ СООБЩЕНИЯ ==========
 def product_message(product):
     return (f"📦 <b>{product['name']}</b>\n\n"
             f"📝 <i>{product['description']}</i>\n\n"
@@ -48,34 +39,30 @@ def product_message(product):
             f"✅ Преимущества: {product['advantages']}\n"
             f"💰 Цена: {product['price']}")
 
+# ========== КОМАНДА /start ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton(product["name"], callback_data=product["id"])] for product in products]
+    keyboard = [[
+        InlineKeyboardButton(product["name"], callback_data=product["id"])
+    ] for product in products]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("🛒 Выберите товар:", reply_markup=reply_markup)
+    await update.message.reply_text("🛒 Выберите товар:",
+                                  reply_markup=reply_markup)
 
+# ========== ОБРАБОТЧИК КНОПОК ==========
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     product_id = query.data
     product = next((p for p in products if p["id"] == product_id), None)
     if product:
-        await query.edit_message_text(text=product_message(product), parse_mode="HTML")
+        await query.edit_message_text(text=product_message(product),
+                                    parse_mode="HTML")
 
+# ========== ЗАПУСК БОТА ==========
 if __name__ == '__main__':
-    from threading import Thread
-
-    # Запускаем Flask в отдельном потоке
-    Thread(target=run_flask).start()
-
-    PORT = int(os.environ.get('PORT', 8000))
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    print(f"✅ Бот и Flask-сервер запущены. Port: {PORT}")
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=f"https://metalfencingbot-6.onrender.com/ {TOKEN}"
-    )
+    print("✅ Бот запущен в режиме polling")
+    app.run_polling()
