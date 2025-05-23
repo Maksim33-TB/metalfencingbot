@@ -1,14 +1,21 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 import os
+from flask import Flask
 
-# Получаем порт из переменной окружения или используем 8000 по умолчанию
-PORT = int(os.environ.get('PORT', 8000))
+# ========== Flask сервер для тестирования ==========
+flask_app = Flask(__name__)
 
-# ========== ТОКЕН ==========
+@flask_app.route('/')
+def home():
+    return "✅ Бот работает. Это тестовая страница."
+
+def run_flask():
+    flask_app.run(host='0.0.0.0', port=os.environ.get('PORT', 8000))
+
+# ========== Telegram-бот ==========
 TOKEN = '8159127478:AAHwjKl3zeZ3LZ4RgJgZ9X4Y1WOOKQFyZww'
 
-# ========== ДАННЫЕ О ТОВАРАХ ==========
 products = [
     {
         "id": "1",
@@ -32,7 +39,6 @@ products = [
     }
 ]
 
-# ========== ФОРМАТИРОВАНИЕ СООБЩЕНИЯ ==========
 def product_message(product):
     return (f"📦 <b>{product['name']}</b>\n\n"
             f"📝 <i>{product['description']}</i>\n\n"
@@ -42,35 +48,31 @@ def product_message(product):
             f"✅ Преимущества: {product['advantages']}\n"
             f"💰 Цена: {product['price']}")
 
-# ========== КОМАНДА /start ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[
-        InlineKeyboardButton(product["name"], callback_data=product["id"])
-    ] for product in products]
+    keyboard = [[InlineKeyboardButton(product["name"], callback_data=product["id"])] for product in products]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("🛒 Выберите товар:",
-                                  reply_markup=reply_markup)
+    await update.message.reply_text("🛒 Выберите товар:", reply_markup=reply_markup)
 
-# ========== ОБРАБОТЧИК КНОПОК ==========
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     product_id = query.data
     product = next((p for p in products if p["id"] == product_id), None)
     if product:
-        await query.edit_message_text(text=product_message(product),
-                                    parse_mode="HTML")
+        await query.edit_message_text(text=product_message(product), parse_mode="HTML")
 
-# ========== ЗАПУСК БОТА ==========
 if __name__ == '__main__':
+    from threading import Thread
+    Thread(target=run_flask).start()
+
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    # Запуск через Webhook
+    print("✅ Бот и Flask-сервер успешно запущены")
     app.run_webhook(
         listen="0.0.0.0",
-        port=PORT,
+        port=int(os.environ.get('PORT', 8000)),
         url_path=TOKEN,
         webhook_url=f"https://metalfencingbot-6.onrender.com/ {TOKEN}"
     )
