@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 import os
 from flask import Flask
@@ -63,16 +63,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
     from threading import Thread
+
+    # Запускаем Flask в отдельном потоке
     Thread(target=run_flask).start()
 
+    PORT = int(os.environ.get('PORT', 8000))
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    print("✅ Бот и Flask-сервер успешно запущены")
+    print(f"✅ Бот и Flask-сервер запущены. Port: {PORT}")
     app.run_webhook(
         listen="0.0.0.0",
-        port=int(os.environ.get('PORT', 8000)),
+        port=PORT,
         url_path=TOKEN,
         webhook_url=f"https://metalfencingbot-6.onrender.com/ {TOKEN}"
     )
