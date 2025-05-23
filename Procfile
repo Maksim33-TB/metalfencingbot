@@ -1,1 +1,1 @@
-python bot.py --webhook-port 8000
+web: python bot.py --webhook-port 8000
