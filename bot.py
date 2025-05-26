@@ -1,5 +1,9 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+import os
+
+# Получаем порт из переменной окружения или используем 8000 по умолчанию
+PORT = int(os.environ.get('PORT', 8000))
 
 # ========== ТОКЕН ==========
 TOKEN = '8159127478:AAHwjKl3zeZ3LZ4RgJgZ9X4Y1WOOKQFyZww'
@@ -63,5 +67,10 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    print("✅ Бот успешно запущен в режиме polling")
-    app.run_polling()
+    # Запуск через Webhook
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=f"https://metalfencingbot.onrender.com/ {TOKEN}"
+    )
