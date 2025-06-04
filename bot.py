@@ -255,22 +255,30 @@ def webhook():
     app.update_queue.put(update)
     return 'ok'
 
-# Инициализация бота
-if __name__ == '__main__':
+# ========== ЗАПУСК БОТА ==========
+def main():
     app = ApplicationBuilder().token(TOKEN).build()
     
-    # Обработчики
+    # Обработчики команд
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_product_selection, pattern="^product_"))
-    app.add_handler(CallbackQueryHandler(handle_spec_selection, pattern="^spec_"))
-    app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^coating_"))
-    app.add_handler(CallbackQueryHandler(handle_color_selection, pattern="^color_"))
-    app.add_handler(CallbackQueryHandler(handle_order, pattern="^order$"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_quantity))
     
-    # Установка вебхука
-    app.bot.set_webhook(url=WEBHOOK_URL)
-    print(f"Webhook установлен на {WEBHOOK_URL}")
+    # Обработчики callback-запросов
+    app.add_handler(CallbackQueryHandler(about_company, pattern="^about$"))
+    app.add_handler(CallbackQueryHandler(contacts, pattern="^contacts$"))
+    app.add_handler(CallbackQueryHandler(show_catalog, pattern="^catalog$"))
+    app.add_handler(CallbackQueryHandler(back_to_main, pattern="^back_to_main$"))
+    app.add_handler(CallbackQueryHandler(show_category_products, pattern="^cat_"))
     
-    # Запуск Flask
-    flask_app.run(host='0.0.0.0', port=PORT)
+    # Обработчик текстовых сообщений
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # Запуск через Webhook
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=f"https://metalfencingbot.onrender.com/{TOKEN}"
+    )
+
+if __name__ == '__main__':
+    main()
