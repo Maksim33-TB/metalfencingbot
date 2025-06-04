@@ -1,236 +1,265 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-    MessageHandler,
-    filters
-)
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+from flask import Flask, request
 import os
-import logging
-from datetime import datetime
 
-# Настройка логирования
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
+# Конфигурация
 PORT = int(os.environ.get('PORT', 8000))
 TOKEN = '8159127478:AAHwjKl3zeZ3LZ4RgJgZ9X4Y1WOOKQFyZww'
-ADMIN_CHAT_IDS = ['79100904945', '79032587332']  # ID менеджера и администратора
+WEBHOOK_URL = f'https://metalfencingbot.onrender.com/{TOKEN}'
 
-# ========== ДАННЫЕ О ТОВАРАХ (упрощенная версия из ТЗ) ==========
-categories = [
-    {"id": "1", "name": "Снегозадержатели"},
-    {"id": "2", "name": "Кровельные ограждения"},
-    {"id": "3", "name": "Пожарные лестницы"},
-    {"id": "4", "name": "Лестницы"},
-    {"id": "5", "name": "Переходные мостики"}
+# Состояния пользователя
+user_data = {}
+
+# Данные о товарах
+products = [
+    {
+        "id": "sts_prof",
+        "name": "СТС «ПРОФ»",
+        "description": (
+            "Снегозадержатель СТС «ПРОФ» длиной 3000 мм предназначен для кровель из профнастила выше НС40 и "
+            "сэндвич-панели любого производителя.\n\n"
+            "Соответствует требованиям ГОСТ.\n\n"
+            "Комплектация:\n"
+            "• Труба плоскоовал Zn 45×25 – 2 шт.\n"
+            "• Кронштейн усиленный СТС с герметичной бутило-каучуковой лентой, оцинкованный, толщина металла 2 мм – 4 шт.\n"
+            "• Заглушки 45х25 – 4 шт."
+        ),
+        "specs": ["Кровля из сэндвич панели", "Кровля из профнастила высокой волны"],
+        "coatings": ["Цинк", "Цинк+краска"],
+        "colors": {
+            "RAL 3003": "Рубиново-красный",
+            "RAL 3005": "Винно-красный",
+            "RAL 5005": "Сигнальный синий",
+            "RAL 6005": "Зеленый мох",
+            "RAL 7004": "Серый",
+            "RAL 8017": "Коричневый",
+            "RAL 9003": "Белый"
+        },
+        "prices": {
+            "Цинк": 3475,
+            "Цинк+краска": 3735
+        }
+    }
 ]
 
-products = {
-    "1": [
-        {
-            "id": "1_1",
-            "name": "СТС «ПРОФ»",
-            "description": "Снегозадержатель для кровель из профнастила и сэндвич-панелей.",
-            "specs": ["Кровля из сэндвич панели", "Кровля из профнастила высокой волны"],
-            "coating": ["Цинк", "Цинк+краска"],
-            "price": {"Цинк": 3475, "Цинк+краска": 3735},
-            "photo": "СТС «ПРОФ».jpg"
-        },
-        # Остальные товары из категории...
-    ],
-    # Остальные категории...
-}
-
-# Глобальные переменные для хранения состояния
-user_carts = {}  # Корзины пользователей
-user_states = {}  # Текущие состояния пользователей
-
-# ========== ФОРМАТИРОВАНИЕ СООБЩЕНИЙ ==========
-def format_product_message(product, selected_options=None):
-    message = f"📦 <b>{product['name']}</b>\n\n"
-    message += f"📝 <i>{product['description']}</i>\n\n"
+# Функции для формирования сообщений
+def format_product_info(product_id, user_id):
+    product = next(p for p in products if p["id"] == product_id)
+    data = user_data.get(user_id, {})
     
-    if selected_options:
-        for option, value in selected_options.items():
-            message += f"🔹 {option}: {value}\n"
+    text = f"<b>{product['name']}</b>\n\n"
+    text += f"<i>Описание:</i>\n{product['description']}\n\n"
     
-    if 'price' in product:
-        if isinstance(product['price'], dict):
-            message += "\n💰 Цены:\n"
-            for coating, price in product['price'].items():
-                message += f"  • {coating}: {price} руб./шт\n"
-        else:
-            message += f"💰 Цена: {product['price']} руб./шт\n"
+    if "spec" in data:
+        text += f"<i>Спецификация:</i> {data['spec']}\n"
     
-    return message
+    if "coating" in data:
+        text += f"<i>Покрытие:</i> {data['coating']}\n"
+        if data['coating'] == "Цинк+краска" and "color" in data:
+            text += f"<i>Цвет (RAL):</i> {data['color']}\n"
+    
+    if "quantity" in data and "coating" in data:
+        price = product['prices'][data['coating']]
+        total = price * data['quantity']
+        text += f"\n<i>Цена:</i> {price} руб./шт.\n"
+        text += f"<i>Количество:</i> {data['quantity']} шт.\n"
+        text += f"<b>Итого:</b> {total} руб."
+    
+    return text
 
-# ========== ОСНОВНЫЕ КОМАНДЫ ==========
+# Обработчики команд
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    user_carts[user_id] = []  # Инициализация корзины
-    user_states[user_id] = "MAIN_MENU"  # Установка состояния
-    
-    keyboard = [
-        [InlineKeyboardButton("🏢 О компании", callback_data="about")],
-        [InlineKeyboardButton("📚 Каталог", callback_data="catalog")],
-        [InlineKeyboardButton("📞 Контакты", callback_data="contacts")]
-    ]
-    
+    keyboard = [[InlineKeyboardButton(product["name"], callback_data=f"product_{product['id']}")] 
+               for product in products]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("🛒 Выберите товар:", reply_markup=reply_markup)
+
+async def handle_product_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
     
-    welcome_text = (
-        "👋 Вас приветствует официальный бот продаж продукции ООО «СТС»!\n\n"
-        "Мы предлагаем элементы безопасности на ВСЕ типы кровель, цены завода изготовителя, "
-        "отгрузка от 1 дня. Воспользуйтесь нашим онлайн-решением для удобного "
-        "формирования заявок на покупку продукции!"
+    product_id = query.data.split("_")[1]
+    user_id = query.from_user.id
+    user_data[user_id] = {"product_id": product_id}
+    
+    product = next(p for p in products if p["id"] == product_id)
+    
+    # Отправляем описание
+    await query.edit_message_text(
+        text=format_product_info(product_id, user_id),
+        parse_mode="HTML"
     )
     
-    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
-
-async def about_company(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    about_text = (
-        "🏢 <b>О компании</b>\n\n"
-        "Компания ООО «СТС» работает в области производства элементов безопасности кровли с 2014 года.\n\n"
-        "Мы применяем высокоточные станки, а на нашем производстве задействованы специалисты с опытом от 5 лет.\n\n"
-        "Мы осуществляем бесплатную доставку до терминала транспортной компании в вашем городе.\n\n"
-        "🌐 Официальный сайт: <a href='http://эбк-стс.рф'>эбк-стс.рф</a>"
+    # Предлагаем выбрать спецификацию
+    keyboard = [[InlineKeyboardButton(spec, callback_data=f"spec_{spec}")] for spec in product["specs"]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text="Выберите спецификацию:",
+        reply_markup=reply_markup
     )
-    
-    keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(about_text, reply_markup=reply_markup, parse_mode="HTML")
 
-async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_spec_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    contacts_text = (
-        "📞 <b>Контакты</b>\n\n"
-        "Наш e-mail: ctcnet@yandex.ru\n\n"
-        "Задайте вопрос, и мы свяжемся с вами в ближайшее время!"
+    spec = query.data.split("_")[1]
+    user_id = query.from_user.id
+    user_data[user_id]["spec"] = spec
+    
+    product_id = user_data[user_id]["product_id"]
+    product = next(p for p in products if p["id"] == product_id)
+    
+    # Предлагаем выбрать покрытие
+    keyboard = [[InlineKeyboardButton(coating, callback_data=f"coating_{coating}")] 
+               for coating in product["coatings"]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(
+        text=format_product_info(product_id, user_id),
+        parse_mode="HTML"
     )
-    
-    keyboard = [
-        [InlineKeyboardButton("📩 Задать вопрос", callback_data="ask_question")],
-        [InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(contacts_text, reply_markup=reply_markup, parse_mode="HTML")
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text="Выберите защитное покрытие:",
+        reply_markup=reply_markup
+    )
 
-# ========== КАТАЛОГ И КОРЗИНА ==========
-async def show_catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_coating_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    keyboard = [
-        [InlineKeyboardButton(cat["name"], callback_data=f"cat_{cat['id']}")]
-        for cat in categories
-    ]
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")])
+    coating = query.data.split("_")[1]
+    user_id = query.from_user.id
+    user_data[user_id]["coating"] = coating
     
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text("📚 <b>Каталог продукции</b>\n\nВыберите категорию:", 
-                                reply_markup=reply_markup, 
-                                parse_mode="HTML")
-
-async def show_category_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    category_id = query.data.split("_")[1]
+    product_id = user_data[user_id]["product_id"]
+    product = next(p for p in products if p["id"] == product_id)
     
-    if category_id not in products:
-        await query.edit_message_text("⚠️ Товары в этой категории временно отсутствуют.")
-        return
-    
-    keyboard = [
-        [InlineKeyboardButton(product["name"], callback_data=f"prod_{product['id']}")]
-        for product in products[category_id]
-    ]
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="catalog")])
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(f"🏷 <b>{categories[int(category_id)-1]['name']}</b>\n\nВыберите модель:", 
-                                reply_markup=reply_markup, 
-                                parse_mode="HTML")
-
-# ========== ОБРАБОТЧИКИ СООБЩЕНИЙ ==========
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    current_state = user_states.get(user_id, "MAIN_MENU")
-    
-    if current_state == "AWAITING_QUESTION":
-        question = update.message.text
-        await send_question_to_admin(update, context, question)
-        user_states[user_id] = "MAIN_MENU"
-        
-        keyboard = [[InlineKeyboardButton("🔙 В главное меню", callback_data="back_to_main")]]
+    if coating == "Цинк+краска":
+        # Предлагаем выбрать цвет
+        colors = list(product["colors"].items())
+        keyboard = [
+            [InlineKeyboardButton(name, callback_data=f"color_{code}") for code, name in colors[i:i+2]]
+            for i in range(0, len(colors), 2)
+        ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.message.reply_text(
-            "📩 Ваш вопрос отправлен! Мы свяжемся с вами в ближайшее время.",
+        await query.edit_message_text(
+            text=format_product_info(product_id, user_id),
+            parse_mode="HTML"
+        )
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="Выберите цвет (RAL Classic):",
             reply_markup=reply_markup
         )
+    else:
+        # Пропускаем выбор цвета, переходим к количеству
+        await query.edit_message_text(
+            text=format_product_info(product_id, user_id),
+            parse_mode="HTML"
+        )
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="Введите количество (шт.):",
+            reply_markup=None
+        )
 
-async def send_question_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE, question):
-    user = update.effective_user
-    message = (
-        f"❓ <b>Новый вопрос от пользователя</b>\n\n"
-        f"👤 Пользователь: {user.full_name}\n"
-        f"📱 Телефон: {user.id}\n\n"
-        f"📝 Вопрос:\n{question}"
-    )
-    
-    for admin_id in ADMIN_CHAT_IDS:
-        try:
-            await context.bot.send_message(
-                chat_id=admin_id,
-                text=message,
-                parse_mode="HTML"
-            )
-        except Exception as e:
-            logger.error(f"Ошибка при отправке вопроса администратору {admin_id}: {e}")
-
-# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_color_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await start(update, context)
-
-# ========== ЗАПУСК БОТА ==========
-def main():
-    app = ApplicationBuilder().token(TOKEN).build()
     
-    # Обработчики команд
-    app.add_handler(CommandHandler("start", start))
+    color_code = query.data.split("_")[1]
+    user_id = query.from_user.id
+    user_data[user_id]["color"] = f"{color_code} ({products[0]['colors'][color_code]})"
     
-    # Обработчики callback-запросов
-    app.add_handler(CallbackQueryHandler(about_company, pattern="^about$"))
-    app.add_handler(CallbackQueryHandler(contacts, pattern="^contacts$"))
-    app.add_handler(CallbackQueryHandler(show_catalog, pattern="^catalog$"))
-    app.add_handler(CallbackQueryHandler(back_to_main, pattern="^back_to_main$"))
-    app.add_handler(CallbackQueryHandler(show_category_products, pattern="^cat_"))
-    
-    # Обработчик текстовых сообщений
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # Запуск через Webhook
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=f"https://metalfencingbot.onrender.com/{TOKEN}"
+    product_id = user_data[user_id]["product_id"]
+    await query.edit_message_text(
+        text=format_product_info(product_id, user_id),
+        parse_mode="HTML"
+    )
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text="Введите количество (шт.):",
+        reply_markup=None
     )
 
+async def handle_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    try:
+        quantity = int(update.message.text)
+        if quantity <= 0:
+            raise ValueError
+        
+        user_data[user_id]["quantity"] = quantity
+        product_id = user_data[user_id]["product_id"]
+        
+        await update.message.reply_text(
+            text=format_product_info(product_id, user_id),
+            parse_mode="HTML"
+        )
+        
+        # Предлагаем оформить заказ
+        keyboard = [[InlineKeyboardButton("Оформить заказ", callback_data="order")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            text="Для оформления заказа нажмите кнопку ниже:",
+            reply_markup=reply_markup
+        )
+        
+    except ValueError:
+        await update.message.reply_text("Пожалуйста, введите корректное количество (целое число больше 0):")
+
+async def handle_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    if user_id not in user_data or "quantity" not in user_data[user_id]:
+        await query.edit_message_text("Ошибка: данные заказа не найдены")
+        return
+    
+    product_id = user_data[user_id]["product_id"]
+    product = next(p for p in products if p["id"] == product_id)
+    
+    # Здесь можно добавить логику оформления заказа
+    await query.edit_message_text(
+        text=f"✅ Ваш заказ оформлен!\n\n{format_product_info(product_id, user_id)}",
+        parse_mode="HTML"
+    )
+    
+    # Очищаем данные пользователя
+    user_data.pop(user_id, None)
+
+# Flask приложение
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def index():
+    return "Бот работает! Используйте Telegram для взаимодействия."
+
+@flask_app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), app.bot)
+    app.update_queue.put(update)
+    return 'ok'
+
+# Инициализация бота
 if __name__ == '__main__':
-    main()
+    app = ApplicationBuilder().token(TOKEN).build()
+    
+    # Обработчики
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(handle_product_selection, pattern="^product_"))
+    app.add_handler(CallbackQueryHandler(handle_spec_selection, pattern="^spec_"))
+    app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^coating_"))
+    app.add_handler(CallbackQueryHandler(handle_color_selection, pattern="^color_"))
+    app.add_handler(CallbackQueryHandler(handle_order, pattern="^order$"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_quantity))
+    
+    # Установка вебхука
+    app.bot.set_webhook(url=WEBHOOK_URL)
+    print(f"Webhook установлен на {WEBHOOK_URL}")
+    
+    # Запуск Flask
+    flask_app.run(host='0.0.0.0', port=PORT)
