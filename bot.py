@@ -1,15 +1,26 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
-from flask import Flask, request
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    MessageHandler,
+    filters
+)
 import os
+import logging
+from datetime import datetime
 
-# Конфигурация
+# Настройка логирования
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
 PORT = int(os.environ.get('PORT', 8000))
 TOKEN = '8159127478:AAHwjKl3zeZ3LZ4RgJgZ9X4Y1WOOKQFyZww'
-WEBHOOK_URL = f'https://metalfencingbot.onrender.com/{TOKEN}'
-
-# Состояния пользователя
-user_data = {}
+ADMIN_CHAT_IDS = ['79100904945', '79032587332']  # ID менеджера и администратора
 
 # Данные о товарах
 products = [
