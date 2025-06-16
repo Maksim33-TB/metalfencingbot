@@ -1240,6 +1240,7 @@ def main():
     app.add_handler(CallbackQueryHandler(confirm_add_to_cart, pattern="^confirm_add_"))
     
     # Обработчик текстовых сообщений
+    app.add_handler(CallbackQueryHandler(show_description, pattern="^show_desc_"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Запуск через Webhook
