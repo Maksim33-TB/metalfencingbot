@@ -832,101 +832,52 @@ async def show_category_products(update: Update, context: ContextTypes.DEFAULT_T
 async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     product_id = query.data.split("_")[1]
     user_id = str(query.from_user.id)
     user_states[user_id] = f"PRODUCT_{product_id}"
-
-    # Поиск продукта по ID
+    
+    # Упрощенный поиск продукта по ID
     product = None
-    for category_id, category_products in products.items():
-        for item in category_products:
+    for category in products.values():
+        for item in category:
             if item['id'] == product_id:
                 product = item
                 break
         if product:
             break
-
+    
     if product is None:
-        await query.edit_message_text("⚠️ Товар не найден.")
+        await query.edit_message_text("⚠️ Произошла ошибка при загрузке товара")
         return
-
+    
     # Сохраняем текущий продукт для пользователя
     user_selections[user_id] = {
         "product_id": product_id,
         "product": product,
         "selected_options": {}
     }
-
-    # Формируем краткое сообщение
-    message = f"<b>{product['name']}</b>\n\n"
-    message += "ℹ️ Нажмите кнопку 'Описание', чтобы увидеть полную информацию о товаре"
-
-    # Создаем кнопки
-    keyboard = [
-        [InlineKeyboardButton("📄 Описание", callback_data=f"show_desc_{product_id}")],
-    ]
+    
+    # Создаем кнопки для выбора характеристик
+    keyboard = []
     
     # Кнопка для выбора спецификации (если есть варианты)
     if 'specs' in product and product['specs']:
-        keyboard.append([InlineKeyboardButton("📌 Выбрать спецификацию", 
-                        callback_data=f"spec_{product_id}")])
+        keyboard.append([InlineKeyboardButton("📌 Выбрать спецификацию", callback_data=f"spec_{product_id}")])
     
     # Кнопка для выбора покрытия (если есть варианты)
     if 'coating' in product and product['coating']:
-        keyboard.append([InlineKeyboardButton("🎨 Выбрать покрытие", 
-                        callback_data=f"select_coating_{product_id}_0")])
+        keyboard.append([InlineKeyboardButton("🎨 Выбрать покрытие", callback_data=f"select_coating_{product_id}_0")])
     
     # Основные кнопки
-    keyboard.append([InlineKeyboardButton("🛒 Добавить в корзину", 
-                    callback_data=f"add_to_cart_{product_id}")])
-    keyboard.append([InlineKeyboardButton("🔙 Назад", 
-                    callback_data=f"cat_{product_id.split('_')[0]}")])
-
+    keyboard.append([InlineKeyboardButton("🛒 Добавить в корзину", callback_data=f"add_to_cart_{product_id}")])
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")])
+    
     reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await query.edit_message_text(
-        message,
-        reply_markup=reply_markup,
-        parse_mode="HTML"
-    )
-
-async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
     
-    product_id = query.data.split("_")[2]
-    user_id = str(query.from_user.id)
+    # Формируем сообщение с полным описанием товара
+    message = format_product_message(product)
     
-    # Получаем сохраненный продукт
-    product = user_selections[user_id]["product"]
-
-    # Формируем полное описание
-    message = f"<b>{product['name']}</b>\n\n"
-    message += f"<i>{product['description']}</i>\n\n"
-    
-    if 'specs' in product and product['specs']:
-        message += "📌 <b>Спецификации:</b>\n"
-        message += "\n".join(f"• {spec}" for spec in product['specs']) + "\n\n"
-    
-    if 'coating' in product and product['coating']:
-        message += "🎨 <b>Доступные покрытия:</b>\n"
-        message += "\n".join(f"• {coating}" for coating in product['coating']) + "\n\n"
-    
-    if 'price' in product:
-        if isinstance(product['price'], dict):
-            message += "💰 <b>Цены:</b>\n"
-            for coating, price in product['price'].items():
-                message += f"• {coating}: {price} руб.\n"
-        else:
-            message += f"💰 <b>Цена:</b> {product['price']} руб.\n"
-
-    # Кнопка возврата
-    keyboard = [
-        [InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
+    # Отправляем сообщение с информацией о товаре
     await query.edit_message_text(
         message,
         reply_markup=reply_markup,
@@ -1240,7 +1191,6 @@ def main():
     app.add_handler(CallbackQueryHandler(confirm_add_to_cart, pattern="^confirm_add_"))
     
     # Обработчик текстовых сообщений
-    app.add_handler(CallbackQueryHandler(show_description, pattern="^show_desc_"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Запуск через Webhook
