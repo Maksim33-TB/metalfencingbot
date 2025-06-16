@@ -858,9 +858,7 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     
     # Создаем кнопки для выбора характеристик
-    keyboard = [
-        [InlineKeyboardButton("📄 Описание", callback_data=f"show_desc_{product_id}")]
-    ]
+    keyboard = []
     
     # Кнопка для выбора спецификации (если есть варианты)
     if 'specs' in product and product['specs']:
@@ -876,36 +874,10 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Формируем краткое сообщение о товаре
-    message = f"<b>{product['name']}</b>\n\n"
-    message += "ℹ️ Нажмите кнопку 'Описание', чтобы увидеть полную информацию о товаре"
+    # Формируем сообщение с полным описанием товара
+    message = format_product_message(product)
     
     # Отправляем сообщение с информацией о товаре
-    await query.edit_message_text(
-        message,
-        reply_markup=reply_markup,
-        parse_mode="HTML"
-    )
-
-async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    product_id = query.data.split("_")[2]
-    user_id = str(query.from_user.id)
-    
-    # Получаем сохраненный продукт
-    product = user_selections[user_id]["product"]
-
-    # Формируем полное описание с использованием существующей функции
-    message = format_product_message(product)
-
-    # Кнопка возврата
-    keyboard = [
-        [InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
     await query.edit_message_text(
         message,
         reply_markup=reply_markup,
@@ -1219,7 +1191,6 @@ def main():
     app.add_handler(CallbackQueryHandler(confirm_add_to_cart, pattern="^confirm_add_"))
     
     # Обработчик текстовых сообщений
-    app.add_handler(CallbackQueryHandler(show_description, pattern="^show_desc_"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Запуск через Webhook
