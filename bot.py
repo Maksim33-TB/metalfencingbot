@@ -31,18 +31,65 @@ categories = [
     {"id": "5", "name": "Переходные мостики"}
 ]
 
+# Данные из Excel файла
+product_specs = {
+    # Снегозадержатели
+    "1_1": {"specs": ["Кровля из сэндвич панели", "Кровля из профнастила высокой волны"], "height": []},
+    "1_2": {"specs": ["Универсальное крепление"], "height": []},
+    "1_3": {"specs": ["Фальцевая кровля"], "height": []},
+    "1_4": {"specs": ["Универсальное крепление"], "height": []},
+    "1_5": {"specs": ["Фальцевая кровля"], "height": []},
+    "1_6": {"specs": ["Универсальное крепление"], "height": []},
+    "1_7": {"specs": ["Фальцевая кровля"], "height": []},
+    "1_8": {"specs": ["Бык", "Волк", "Кошка", "Петух"], "height": []},
+    "1_9": {"specs": ["Бык", "Волк", "Кошка", "Петух"], "height": []},
+    
+    # Кровельные ограждения
+    "2_1": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_2": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_3": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_4": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_5": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_6": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_7": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_8": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_9": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_10": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_11": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    "2_12": {"specs": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"], "height": []},
+    
+    # Пожарные лестницы
+    "3_1": {"specs": [], "height": []},
+    "3_2": {"specs": [], "height": []},
+    
+    # Лестницы
+    "4_1": {"specs": ["Длина 2000 мм", "Длина 3000 мм"], "height": []},
+    "4_2": {"specs": ["Длина 2000 мм", "Длина 3000 мм"], "height": []},
+    "4_3": {"specs": ["Длина 2000 мм", "Длина 3000 мм"], "height": []},
+    "4_4": {"specs": ["Длина 2000 мм", "Длина 3000 мм"], "height": []},
+    
+    # Переходные мостики
+    "5_1": {"specs": ["Длина 600 мм", "Длина 1250 мм", "Длина 2500 мм"], "height": []},
+    "5_2": {"specs": ["Длина 600 мм", "Длина 1250 мм", "Длина 2500 мм"], "height": []},
+    "5_3": {"specs": ["Длина 600 мм", "Длина 1250 мм", "Длина 2500 мм"], "height": []},
+    "5_4": {"specs": ["Длина 600 мм", "Длина 1250 мм", "Длина 2500 мм"], 
+            "height": ["Высота 600 мм", "Высота 800 мм", "Высота 1200 мм"]},
+}
+
 products = {
     "1": [
         {
             "id": "1_1",
             "name": "СТС «ПРОФ»",
             "description": (
-                "Снегозадержатель СТС «ПРОФ» длиной 3000 мм предназначен для кровель из профнастила выше НС40 и сендвич-панели любого производителя.\n\n"
+                "Снегозадержатель СТС «ПРОФ» длиной 3000 мм предназначен для кровель из "
+                "профнастила выше НС40 и сендвич-панели любого производителя.\n\n"
                 "Снегозадержатель соответствует требованиям ГОСТ.\n\n"
                 "Комплектация:\n"
-                "1. Труба плоскоовал Zn 45×25 – 2 шт.\n"
-                "2. Кронштейн усиленный СТС с герметичной бутило-каучуковой лентой, оцинкованный, толщина металла 2 мм – 4 шт.\n"
-                "3. Заглушки 45х25 – 4 шт."
+                "1. Труба плоскоовал Zn 45×25 -- 2 шт.\n"
+                "2. Кронштейн усиленный СТС с герметичной бутило-каучуковой лентой, "
+                "оцинкованный, толщина металла 2 мм -- 4 шт.\n"
+                "3. Заглушки 45х25 -- 4 шт."
             ),
             "specs": ["Кровля из сэндвич панели", "Кровля из профнастила высокой волны"],
             "coating": ["Цинк", "Цинк+краска"],
@@ -720,11 +767,11 @@ def format_product_message(product, selected_options=None):
             else:
                 message += "\n💰 Цены:\n"
                 for coating, price in product['price'].items():
-                    message += f"  • {coating}: {price} руб./шт\n"
+                    message += f" • {coating}: {price} руб./шт\n"
         else:
             message += f"💰 Цена: {product['price']} руб./шт\n"
-    
     return message
+
 # ========== ОСНОВНЫЕ КОМАНДЫ ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
@@ -737,13 +784,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📚 Каталог", callback_data="catalog")],
         [InlineKeyboardButton("📞 Контакты", callback_data="contacts")]
     ]
-    
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     welcome_text = (
         "👋 Вас приветствует официальный бот продаж продукции ООО «СТС»!\n\n"
-        "Мы предлагаем элементы безопасности на ВСЕ типы кровель, цены завода изготовителя, "
-        "отгрузка от 1 дня. Воспользуйтесь нашим онлайн-решением для удобного "
+        "Мы предлагаем элементы безопасности на ВСЕ типы кровель, цены завода "
+        "изготовителя, отгрузка от 1 дня. Воспользуйтесь нашим онлайн-решением для удобного "
         "формирования заявок на покупку продукции!"
     )
     
@@ -760,15 +806,17 @@ async def about_company(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     about_text = (
         "🏢 <b>О компании</b>\n\n"
-        "Компания ООО «СТС» работает в области производства элементов безопасности кровли с 2014 года.\n\n"
-        "Мы применяем высокоточные станки, а на нашем производстве задействованы специалисты с опытом от 5 лет.\n\n"
-        "Мы осуществляем бесплатную доставку до терминала транспортной компании в вашем городе.\n\n"
+        "Компания ООО «СТС» работает в области производства элементов "
+        "безопасности кровли с 2014 года.\n\n"
+        "Мы применяем высокоточные станки, а на нашем производстве "
+        "задействованы специалисты с опытом от 5 лет.\n\n"
+        "Мы осуществляем бесплатную доставку до терминала транспортной компании "
+        "в вашем городе.\n\n"
         "🌐 Официальный сайт: <a href='http://эбк-стс.рф'>эбк-стс.рф</a>"
     )
     
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
     await query.edit_message_text(about_text, reply_markup=reply_markup, parse_mode="HTML")
 
 async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -786,13 +834,13 @@ async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
     await query.edit_message_text(contacts_text, reply_markup=reply_markup, parse_mode="HTML")
 
 # ========== КАТАЛОГ И КОРЗИНА ==========
 async def show_catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
     user_id = str(query.from_user.id)
     user_states[user_id] = "CATALOG"
     
@@ -801,21 +849,22 @@ async def show_catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for cat in categories
     ]
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")])
-    
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text("📚 <b>Каталог продукции</b>\n\nВыберите категорию:", 
-                                reply_markup=reply_markup, 
+    
+    await query.edit_message_text("📚 <b>Каталог продукции</b>\n\nВыберите категорию:",
+                                reply_markup=reply_markup,
                                 parse_mode="HTML")
 
 async def show_category_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
     category_id = query.data.split("_")[1]
     user_id = str(query.from_user.id)
     user_states[user_id] = f"CATEGORY_{category_id}"
     
     if category_id not in products:
-        await query.edit_message_text("⚠️ Товары в этой категории временно отсутствуют.")
+        await query.edit_message_text("Товары в этой категории временно отсутствуют.")
         return
     
     keyboard = [
@@ -823,20 +872,21 @@ async def show_category_products(update: Update, context: ContextTypes.DEFAULT_T
         for product in products[category_id]
     ]
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="catalog")])
-    
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(f"🏷 <b>{categories[int(category_id)-1]['name']}</b>\n\nВыберите модель:", 
-                                reply_markup=reply_markup, 
+    
+    await query.edit_message_text(f"🏷 <b>{categories[int(category_id)-1]['name']}</b>\n\nВыберите модель:",
+                                reply_markup=reply_markup,
                                 parse_mode="HTML")
 
 async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
     product_id = query.data.split("_")[1]
     user_id = str(query.from_user.id)
     user_states[user_id] = f"PRODUCT_{product_id}"
     
-    # Упрощенный поиск продукта по ID
+    # Поиск продукта по ID
     product = None
     for category in products.values():
         for item in category:
@@ -846,8 +896,8 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if product:
             break
     
-    if product is None:
-        await query.edit_message_text("⚠️ Произошла ошибка при загрузке товара")
+    if not product:
+        await query.edit_message_text("Выбранный товар временно недоступен")
         return
     
     # Сохраняем текущий продукт для пользователя
@@ -857,16 +907,27 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "selected_options": {}
     }
     
+    # Получаем спецификации и высоты для продукта
+    specs = product_specs.get(product_id, {}).get("specs", [])
+    heights = product_specs.get(product_id, {}).get("height", [])
+    
     # Создаем кнопки для выбора характеристик
     keyboard = []
     
+    # Кнопка для описания
+    keyboard.append([InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")])
+    
     # Кнопка для выбора спецификации (если есть варианты)
-    if 'specs' in product and product['specs']:
-        keyboard.append([InlineKeyboardButton("📌 Выбрать спецификацию", callback_data=f"spec_{product_id}")])
+    if specs:
+        keyboard.append([InlineKeyboardButton("📌 Спецификация", callback_data=f"spec_{product_id}")])
+    
+    # Кнопка для выбора высоты (если есть варианты)
+    if heights:
+        keyboard.append([InlineKeyboardButton("📏 Высота", callback_data=f"height_{product_id}")])
     
     # Кнопка для выбора покрытия (если есть варианты)
     if 'coating' in product and product['coating']:
-        keyboard.append([InlineKeyboardButton("🎨 Выбрать покрытие", callback_data=f"select_coating_{product_id}_0")])
+        keyboard.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"select_coating_{product_id}_0")])
     
     # Основные кнопки
     keyboard.append([InlineKeyboardButton("🛒 Добавить в корзину", callback_data=f"add_to_cart_{product_id}")])
@@ -874,10 +935,45 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Формируем сообщение с полным описанием товара
-    message = format_product_message(product)
+    # Формируем краткое сообщение о товаре
+    message = f"📦 <b>{product['name']}</b>\n\n"
+    message += "Выберите параметры товара:"
     
-    # Отправляем сообщение с информацией о товаре
+    await query.edit_message_text(
+        message,
+        reply_markup=reply_markup,
+        parse_mode="HTML"
+    )
+
+async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    product_id = query.data.split("_")[1]
+    user_id = str(query.from_user.id)
+    
+    # Получаем продукт
+    product = None
+    for category in products.values():
+        for item in category:
+            if item['id'] == product_id:
+                product = item
+                break
+        if product:
+            break
+    
+    if not product:
+        await query.edit_message_text("Описание товара временно недоступно")
+        return
+    
+    # Формируем сообщение с описанием
+    message = f"📦 <b>{product['name']}</b>\n\n"
+    message += f"📝 <i>{product['description']}</i>"
+    
+    # Кнопка для возврата
+    keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await query.edit_message_text(
         message,
         reply_markup=reply_markup,
@@ -887,88 +983,117 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def select_specification(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
     product_id = query.data.split("_")[1]
     user_id = str(query.from_user.id)
     
-    product = None
-    for cat in products.values():
-        for p in cat:
-            if p['id'] == product_id:
-                product = p
-                break
-        if product:
-            break
+    # Получаем спецификации для продукта
+    specs = product_specs.get(product_id, {}).get("specs", [])
     
-    if not product:
-        await query.edit_message_text("⚠️ Товар не найден.")
+    if not specs:
+        await query.answer("Для этого товара нет вариантов спецификации")
         return
     
     keyboard = [
         [InlineKeyboardButton(spec, callback_data=f"select_spec_{product_id}_{i}")]
-        for i, spec in enumerate(product['specs'])
+        for i, spec in enumerate(specs)
     ]
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
-    
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await query.edit_message_text(
         "📌 Выберите спецификацию:",
+        reply_markup=reply_markup
+    )
+
+async def select_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    product_id = query.data.split("_")[1]
+    user_id = str(query.from_user.id)
+    
+    # Получаем высоты для продукта
+    heights = product_specs.get(product_id, {}).get("height", [])
+    
+    if not heights:
+        await query.answer("Для этого товара нет вариантов высоты")
+        return
+    
+    keyboard = [
+        [InlineKeyboardButton(height, callback_data=f"select_height_{product_id}_{i}")]
+        for i, height in enumerate(heights)
+    ]
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "📏 Выберите высоту:",
         reply_markup=reply_markup
     )
 
 async def handle_spec_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
     _, product_id, spec_index = query.data.split("_")[1:]
     spec_index = int(spec_index)
     user_id = str(query.from_user.id)
     
-    product = None
-    for cat in products.values():
-        for p in cat:
-            if p['id'] == product_id:
-                product = p
-                break
-        if product:
-            break
+    # Получаем спецификации для продукта
+    specs = product_specs.get(product_id, {}).get("specs", [])
     
-    if not product:
-        await query.edit_message_text("⚠️ Товар не найден.")
+    if not specs or spec_index >= len(specs):
+        await query.edit_message_text("Ошибка выбора спецификации")
         return
     
     # Сохраняем выбранную спецификацию
-    user_selections[user_id]["selected_options"]["Спецификация"] = product['specs'][spec_index]
+    user_selections[user_id]["selected_options"]["Спецификация"] = specs[spec_index]
     
-    # Переходим к выбору покрытия
-    keyboard = [
-        [InlineKeyboardButton(coating, callback_data=f"select_coating_{product_id}_{i}")]
-        for i, coating in enumerate(product['coating'])
-    ]
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"spec_{product_id}")])
+    # Возвращаемся к продукту
+    await show_product(update, context)
+
+async def handle_height_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
     
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(
-        "🛡 Выберите защитное покрытие:",
-        reply_markup=reply_markup
-    )
+    _, product_id, height_index = query.data.split("_")[1:]
+    height_index = int(height_index)
+    user_id = str(query.from_user.id)
+    
+    # Получаем высоты для продукта
+    heights = product_specs.get(product_id, {}).get("height", [])
+    
+    if not heights or height_index >= len(heights):
+        await query.edit_message_text("Ошибка выбора высоты")
+        return
+    
+    # Сохраняем выбранную высоту
+    user_selections[user_id]["selected_options"]["Высота"] = heights[height_index]
+    
+    # Возвращаемся к продукту
+    await show_product(update, context)
 
 async def handle_coating_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
     _, product_id, coating_index = query.data.split("_")[1:]
     coating_index = int(coating_index)
     user_id = str(query.from_user.id)
     
+    # Получаем продукт
     product = None
-    for cat in products.values():
-        for p in cat:
-            if p['id'] == product_id:
-                product = p
+    for category in products.values():
+        for item in category:
+            if item['id'] == product_id:
+                product = item
                 break
         if product:
             break
     
-    if not product:
-        await query.edit_message_text("⚠️ Товар не найден.")
+    if not product or 'coating' not in product or coating_index >= len(product['coating']):
+        await query.edit_message_text("Ошибка выбора покрытия")
         return
     
     # Сохраняем выбранное покрытие
@@ -990,17 +1115,6 @@ async def handle_coating_selection(update: Update, context: ContextTypes.DEFAULT
         # Переходим к выбору количества
         await select_quantity(update, context, product_id)
 
-async def enter_ral_color(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    product_id = query.data.split("_")[2]
-    user_id = str(query.from_user.id)
-    user_states[user_id] = f"AWAITING_RAL_{product_id}"
-    
-    await query.edit_message_text(
-        "✏️ Введите четырехзначный код цвета RAL (например, 3005):"
-    )
-
 async def select_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, product_id=None):
     if not product_id:
         query = update.callback_query
@@ -1009,19 +1123,6 @@ async def select_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, pr
     
     user_id = str(update.effective_user.id)
     user_states[user_id] = f"AWAITING_QUANTITY_{product_id}"
-    
-    product = None
-    for cat in products.values():
-        for p in cat:
-            if p['id'] == product_id:
-                product = p
-                break
-        if product:
-            break
-    
-    if not product:
-        await update.message.reply_text("⚠️ Товар не найден.")
-        return
     
     # Если это вызов из handle_coating_selection, используем query
     if hasattr(update, 'callback_query'):
@@ -1049,7 +1150,7 @@ async def handle_quantity_input(update: Update, context: ContextTypes.DEFAULT_TY
         if quantity <= 0:
             raise ValueError
     except ValueError:
-        await update.message.reply_text("⚠️ Пожалуйста, введите корректное количество (целое число больше 0):")
+        await update.message.reply_text("Пожалуйста, введите корректное количество (целое число больше 0):")
         return
     
     # Сохраняем количество
@@ -1082,11 +1183,12 @@ async def handle_quantity_input(update: Update, context: ContextTypes.DEFAULT_TY
 async def confirm_add_to_cart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
     product_id = query.data.split("_")[2]
     user_id = str(query.from_user.id)
     
     if user_id not in user_selections or user_selections[user_id]["product_id"] != product_id:
-        await query.edit_message_text("⚠️ Ошибка добавления в корзину. Пожалуйста, начните выбор заново.")
+        await query.edit_message_text("Ошибка добавления в корзину. Пожалуйста, начните выбор заново.")
         return
     
     # Добавляем товар в корзину
@@ -1123,7 +1225,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Простая валидация RAL цвета (4 цифры)
         if not (ral_color.isdigit() and len(ral_color) == 4):
-            await update.message.reply_text("⚠️ Пожалуйста, введите корректный код RAL (четыре цифры):")
+            await update.message.reply_text("Пожалуйста, введите корректный код RAL (четыре цифры):")
             return
         
         user_selections[user_id]["selected_options"]["Цвет, RAL Classic"] = f"RAL {ral_color}"
@@ -1139,7 +1241,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         keyboard = [[InlineKeyboardButton("🔙 В главное меню", callback_data="back_to_main")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
         await update.message.reply_text(
             "📩 Ваш вопрос отправлен! Мы свяжемся с вами в ближайшее время.",
             reply_markup=reply_markup
@@ -1184,8 +1285,11 @@ def main():
     app.add_handler(CallbackQueryHandler(back_to_main, pattern="^back_to_main$"))
     app.add_handler(CallbackQueryHandler(show_category_products, pattern="^cat_"))
     app.add_handler(CallbackQueryHandler(show_product, pattern="^prod_"))
+    app.add_handler(CallbackQueryHandler(show_description, pattern="^desc_"))
     app.add_handler(CallbackQueryHandler(select_specification, pattern="^spec_"))
+    app.add_handler(CallbackQueryHandler(select_height, pattern="^height_"))
     app.add_handler(CallbackQueryHandler(handle_spec_selection, pattern="^select_spec_"))
+    app.add_handler(CallbackQueryHandler(handle_height_selection, pattern="^select_height_"))
     app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^select_coating_"))
     app.add_handler(CallbackQueryHandler(enter_ral_color, pattern="^enter_ral_"))
     app.add_handler(CallbackQueryHandler(confirm_add_to_cart, pattern="^confirm_add_"))
