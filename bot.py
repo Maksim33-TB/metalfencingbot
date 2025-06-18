@@ -1115,6 +1115,18 @@ async def handle_coating_selection(update: Update, context: ContextTypes.DEFAULT
         # Переходим к выбору количества
         await select_quantity(update, context, product_id)
 
+async def enter_ral_color(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    product_id = query.data.split("_")[2]
+    user_id = str(query.from_user.id)
+    user_states[user_id] = f"AWAITING_RAL_{product_id}"
+    
+    await query.edit_message_text(
+        "✏️ Введите четырехзначный код цвета RAL (например, 3005):"
+    )
+
 async def select_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, product_id=None):
     if not product_id:
         query = update.callback_query
