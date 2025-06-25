@@ -1,12 +1,3 @@
-print("\n=== Проверка спецификаций ===")
-missing = []
-for cat in products.values():
-    for item in cat:
-        if item['id'] not in product_specs:
-            missing.append(item['id'])
-print(f"Отсутствуют спецификации для: {missing if missing else 'все есть!'}")
-print("============================")
-
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -1955,14 +1946,6 @@ async def show_category_products(update: Update, context: ContextTypes.DEFAULT_T
                                 reply_markup=reply_markup,
                                 parse_mode="HTML")
 
-# Временный код для проверки (добавьте в начало файла)
-print("=== Проверка базы товаров ===")
-for category_id, items in products.items():
-    print(f"Категория {category_id}: {len(items)} товаров")
-    for item in items:
-        print(f"ID: {item['id']}, Название: {item['name']}")
-print("============================")
-
 async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -1970,34 +1953,41 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(query.from_user.id)
     user_states[user_id] = f"PRODUCT_{product_id}"
 
-    # Находим товар в базе
-    product = next(
-        (item for category in products.values() for item in category if item['id'] == product_id),
-        None
-    )
+    # Логируем запрос для отладки
+    print(f"\n=== Запрошен товар ID: {product_id} ===")
+    
+    # Ищем товар во всех категориях
+    product = None
+    for category_id in products:
+        for item in products[category_id]:
+            if item['id'] == product_id:
+                product = item
+                print(f"Найден товар: {product['name']}")
+                break
+        if product:
+            break
 
-    # Если товар не найден — выводим ошибку и возвращаемся
     if not product:
+        print(f"Товар {product_id} НЕ НАЙДЕН в базе!")
         await query.edit_message_text(
-            "⚠️ Ошибка: товар не найден в базе",
+            "⚠️ Конфигурация товара не завершена",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")]
             ])
         )
         return
 
-    # Получаем ВСЕ возможные параметры товара
+    # Получаем параметры
     specs = product_specs.get(product_id, {}).get("specs", [])
     heights = product_specs.get(product_id, {}).get("height", [])
     coatings = product.get("coating", [])
 
-    # Создаём кнопки меню
+    print(f"Параметры: specs={specs}, heights={heights}, coatings={coatings}")
+
+    # Формируем кнопки
     buttons = []
-    
-    # Обязательные кнопки
     buttons.append([InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")])
     
-    # Динамические кнопки (по наличию данных)
     if specs:
         buttons.append([InlineKeyboardButton("📌 Спецификация", callback_data=f"spec_{product_id}")])
     if heights:
@@ -2005,11 +1995,11 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if coatings:
         buttons.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"coating_{product_id}")])
     
-    # Кнопки действия
-    buttons.append([InlineKeyboardButton("🛒 Добавить в корзину", callback_data=f"add_{product_id}")])
-    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")])
+    buttons.extend([
+        [InlineKeyboardButton("🛒 Добавить в корзину", callback_data=f"add_{product_id}")],
+        [InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")]
+    ])
 
-    # Отправляем сообщение
     await query.edit_message_text(
         f"📦 <b>{product['name']}</b>\n\nВыберите параметр:",
         reply_markup=InlineKeyboardMarkup(buttons),
