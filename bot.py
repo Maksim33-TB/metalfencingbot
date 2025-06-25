@@ -1953,7 +1953,7 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(query.from_user.id)
     user_states[user_id] = f"PRODUCT_{product_id}"
 
-    # Поиск продукта по ID
+    # Находим продукт в базе
     product = None
     for category_id, category_products in products.items():
         for item in category_products:
@@ -1963,52 +1963,50 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if product:
             break
 
+    # Если товар не найден — создаём заглушку
     if not product:
-        await query.edit_message_text("Выбранный товар временно недоступен")
-        return
+        product = {
+            "id": product_id,
+            "name": "Товар без названия",
+            "description": "Описание отсутствует",
+            "coating": [],
+            "price": {}
+        }
 
-    # Сохраняем текущий продукт для пользователя
+    # Сохраняем продукт для пользователя
     user_selections[user_id] = {
         "product_id": product_id,
         "product": product,
         "selected_options": {}
     }
 
-    # Получаем спецификации и высоты для продукта
+    # Получаем спецификации из product_specs
     specs = product_specs.get(product_id, {}).get("specs", [])
     heights = product_specs.get(product_id, {}).get("height", [])
 
-    # Создаем кнопки для выбора характеристик
-    keyboard = []
+    # Создаём кнопки
+    keyboard = [
+        [InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")]
+    ]
 
-    # Кнопка для описания
-    keyboard.append([InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")])
-
-    # Кнопка для выбора спецификации (если есть варианты)
     if specs:
         keyboard.append([InlineKeyboardButton("📌 Спецификация", callback_data=f"spec_{product_id}")])
-
-    # Кнопка для выбора высоты (если есть варианты)
+    
     if heights:
         keyboard.append([InlineKeyboardButton("📏 Высота", callback_data=f"height_{product_id}")])
 
-    # Кнопка для выбора покрытия (если есть варианты)
     if 'coating' in product and product['coating']:
         keyboard.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"select_coating_{product_id}_0")])
 
-    # Основные кнопки
-    keyboard.append([InlineKeyboardButton("🛒 Добавить в корзину", callback_data=f"add_to_cart_{product_id}")])
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")])
+    keyboard.extend([
+        [InlineKeyboardButton("🛒 Добавить в корзину", callback_data=f"add_to_cart_{product_id}")],
+        [InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")]
+    ])
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    # Формируем краткое сообщение о товаре
-    message = f"📦 <b>{product['name']}</b>\n\n"
-    message += "Выберите параметры товара:"
-
+    # Отправляем сообщение
     await query.edit_message_text(
-        message,
-        reply_markup=reply_markup,
+        f"📦 <b>{product['name']}</b>\n\nВыберите параметры товара:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="HTML"
     )
 
