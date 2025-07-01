@@ -2015,6 +2015,7 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
         buttons.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"coating_{product_id}")])
     
     # Кнопка "Назад"
+    buttons.append([InlineKeyboardButton("🛒 ЗАКАЗАТЬ", callback_data="confirm_order")])
     buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")])
     
     await query.edit_message_text(
@@ -2204,6 +2205,133 @@ async def handle_tubes_selection(update: Update, context: ContextTypes.DEFAULT_T
     
     user_selections[user_id]["selected_options"]["Количество поперечных труб"] = tube_options[tube_index]
     await show_product(update, context)
+
+async def confirm_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = str(query.from_user.id)
+    user_states[user_id] = "AWAITING_ORDER_DETAILS"
+    
+    await query.edit_message_text(
+        "🛒 Для оформления заказа введите:\n"
+        "1. Ваше ФИО\n"
+        "2. Номер телефона\n"
+        "3. Название организации (или 'Физ. лицо')\n\n"
+        "Пример:\n"
+        "Иванов Иван Иванович\n"
+        "+79101234567\n"
+        "ООО СтройГрад"
+    )
+
+async def handle_order_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+    if user_states.get(user_id) != "AWAITING_ORDER_DETAILS":
+        return
+    
+    order_details = update.message.text.split('\n')
+    if len(order_details) < 3:
+        await update.message.reply_text("Пожалуйста, введите все данные в указанном формате")
+        return
+    
+    # Сохраняем данные заказа
+    user_selections[user_id]["order_details"] = {
+        "fio": order_details[0].strip(),
+        "phone": order_details[1].strip(),
+        "org": order_details[2].strip(),
+        "username": update.effective_user.full_name,
+        "user_id": user_id
+    }
+    
+    # Формируем подтверждение заказа
+    product = user_selections[user_id]["product"]
+    options = user_selections[user_id]["selected_options"]
+    
+    order_message = (
+        f"✅ <b>Ваш заказ:</b>\n\n"
+        f"📦 <b>{product['name']}</b>\n"
+    )
+    
+    for option, value in options.items():
+        order_message += f"🔹 {option}: {value}\n"
+    
+    order_message += (
+        f"\n👤 <b>Ваши данные:</b>\n"
+        f"ФИО: {order_details[0].strip()}\n"
+        f"Телефон: {order_details[1].strip()}\n"
+        f"Организация: {order_details[2].strip()}\n\n"
+        f"Подтвердите заказ:"
+    )
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ Подтвердить заказ", callback_data="finalize_order")],
+        [InlineKeyboardButton("❌ Отменить", callback_data="cancel_order")]
+    ]
+    
+    await update.message.reply_text(
+        order_message,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="HTML"
+    )
+
+async def finalize_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = str(query.from_user.id)
+    if user_id not in user_selections:
+        await query.edit_message_text("Ошибка оформления заказа")
+        return
+    
+    # Формируем сообщение для менеджера
+    product = user_selections[user_id]["product"]
+    options = user_selections[user_id]["selected_options"]
+    details = user_selections[user_id]["order_details"]
+    
+    manager_message = (
+        f"🛒 <b>Новый заказ</b>\n\n"
+        f"👤 <b>Клиент:</b>\n"
+        f"ФИО: {details['fio']}\n"
+        f"Телефон: {details['phone']}\n"
+        f"Организация: {details['org']}\n"
+        f"Telegram: @{query.from_user.username} (id: {user_id})\n\n"
+        f"📦 <b>Товар:</b>\n"
+        f"{product['name']}\n"
+    )
+    
+    for option, value in options.items():
+        manager_message += f"🔹 {option}: {value}\n"
+    
+    # Отправляем менеджерам
+    for admin_id in ADMIN_CHAT_IDS:
+        try:
+            await context.bot.send_message(
+                chat_id=admin_id,
+                text=manager_message,
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при отправке заказа администратору {admin_id}: {e}")
+    
+    # Отправляем подтверждение клиенту
+    confirmation_message = (
+        "✅ <b>Благодарим за заказ!</b>\n\n"
+        "• После оформления, в течение 60 минут, Вам перезвонит менеджер\n"
+        "• Режим работы: Пн-Пт 9:00-17:00\n"
+        "• После подтверждения выставим счет\n"
+        "• Отгрузка от 1 рабочего дня\n"
+        "• Доступен самовывоз или доставка ТК\n\n"
+        "Для новых заказов нажмите /start"
+    )
+    
+    await query.edit_message_text(
+        confirmation_message,
+        parse_mode="HTML"
+    )
+    
+    # Очищаем данные
+    del user_selections[user_id]
+    user_states[user_id] = "MAIN_MENU"
 
 async def handle_coating_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
