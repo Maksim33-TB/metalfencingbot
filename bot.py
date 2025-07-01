@@ -2152,6 +2152,59 @@ async def handle_height_selection(update: Update, context: ContextTypes.DEFAULT_
     # Возвращаемся к продукту
     await show_product(update, context)
 
+async def select_tubes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    product_id = query.data.split("_")[1]
+    specs = product_specs.get(product_id, {}).get("specs", [])
+    
+    # Ищем варианты количества труб
+    tube_options = []
+    for spec in specs:
+        if "Количество поперечных труб" in spec:
+            tube_options.append(spec.split(":")[1].strip())
+    
+    if not tube_options:
+        keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]]
+        await query.edit_message_text(
+            "Нет вариантов количества труб",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+    
+    keyboard = [
+        [InlineKeyboardButton(option, callback_data=f"select_tubes_{product_id}_{i}")]
+        for i, option in enumerate(tube_options)
+    ]
+    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
+    
+    await query.edit_message_text(
+        "🔢 Выберите количество поперечных труб:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def handle_tubes_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    _, product_id, tube_index = query.data.split("_")[1:]
+    tube_index = int(tube_index)
+    user_id = str(query.from_user.id)
+    
+    specs = product_specs.get(product_id, {}).get("specs", [])
+    tube_options = []
+    for spec in specs:
+        if "Количество поперечных труб" in spec:
+            tube_options.append(spec.split(":")[1].strip())
+    
+    if not tube_options or tube_index >= len(tube_options):
+        await query.edit_message_text("Ошибка выбора количества труб")
+        return
+    
+    user_selections[user_id]["selected_options"]["Количество поперечных труб"] = tube_options[tube_index]
+    await show_product(update, context)
+
 async def handle_coating_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
