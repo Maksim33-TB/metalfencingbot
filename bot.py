@@ -2561,14 +2561,17 @@ def main():
     app.add_handler(CallbackQueryHandler(select_height, pattern="^height_"))
     app.add_handler(CallbackQueryHandler(handle_spec_selection, pattern="^select_spec_"))
     app.add_handler(CallbackQueryHandler(handle_height_selection, pattern="^select_height_"))
-    app.add_handler(CallbackQueryHandler(select_tubes, pattern="^tubes_"))
-    app.add_handler(CallbackQueryHandler(handle_tubes_selection, pattern="^select_tubes_"))
+    app.add_handler(CallbackQueryHandler(select_tubes, pattern="^tubes_"))  # Новый обработчик
+    app.add_handler(CallbackQueryHandler(handle_tubes_selection, pattern="^select_tubes_"))  # Новый обработчик
     app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^select_coating_"))
     app.add_handler(CallbackQueryHandler(enter_ral_color, pattern="^enter_ral_"))
     app.add_handler(CallbackQueryHandler(confirm_add_to_cart, pattern="^confirm_add_"))
+    app.add_handler(CallbackQueryHandler(confirm_order, pattern="^confirm_order$"))  # Новый обработчик
+    app.add_handler(CallbackQueryHandler(finalize_order, pattern="^finalize_order$"))  # Новый обработчик
     
-    # Обработчик текстовых сообщений
+    # Обработчик текстовых сообщений (должен быть последним)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_order_details))  # Новый обработчик
     
     # Запуск через Webhook
     app.run_webhook(
