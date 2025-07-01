@@ -1891,6 +1891,9 @@ async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
+    user_id = str(query.from_user.id)
+    user_states[user_id] = "AWAITING_QUESTION"  # Добавляем эту строку
+    
     contacts_text = (
         "📞 <b>Контакты</b>\n\n"
         "Наш e-mail: ctcnet@yandex.ru\n\n"
