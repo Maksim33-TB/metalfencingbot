@@ -1952,59 +1952,73 @@ async def show_category_products(update: Update, context: ContextTypes.DEFAULT_T
 async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
     product_id = query.data.split("_")[1]
     user_id = str(query.from_user.id)
     user_states[user_id] = f"PRODUCT_{product_id}"
-
-    # Логируем запрос для отладки
-    print(f"\n=== Запрошен товар ID: {product_id} ===")
     
-    # Ищем товар во всех категориях
+    # Ищем товар
     product = None
     for category_id in products:
         for item in products[category_id]:
             if item['id'] == product_id:
                 product = item
-                print(f"Найден товар: {product['name']}")
                 break
         if product:
             break
-
+    
     if not product:
-        print(f"Товар {product_id} НЕ НАЙДЕН в базе!")
-        await query.edit_message_text(
-            "⚠️ Конфигурация товара не завершена",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")]
-            ])
-        )
+        await query.edit_message_text("Товар не найден")
         return
-
-    # Получаем параметры
-    specs = product_specs.get(product_id, {}).get("specs", [])
-    heights = product_specs.get(product_id, {}).get("height", [])
-    coatings = product.get("coating", [])
-
-    print(f"Параметры: specs={specs}, heights={heights}, coatings={coatings}")
-
+    
+    # Сохраняем продукт для пользователя
+    if user_id not in user_selections:
+        user_selections[user_id] = {}
+    user_selections[user_id]["product"] = product
+    user_selections[user_id]["product_id"] = product_id
+    user_selections[user_id]["selected_options"] = {}
+    
+    # Формируем сообщение с ценами
+    price_message = ""
+    if isinstance(product.get('price'), dict):
+        prices = product['price'].values()
+        if prices:
+            min_price = min(prices)
+            max_price = max(prices)
+            price_message = f"\n💰 Цены: от {min_price} до {max_price} руб./шт\n"
+    elif 'price' in product:
+        price_message = f"\n💰 Цена: {product['price']} руб./шт\n"
+    
     # Формируем кнопки
     buttons = []
+    
+    # Кнопка "Описание"
     buttons.append([InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")])
     
+    # Кнопка "Спецификация" (если есть варианты)
+    specs = product_specs.get(product_id, {}).get("specs", [])
     if specs:
         buttons.append([InlineKeyboardButton("📌 Спецификация", callback_data=f"spec_{product_id}")])
+    
+    # Кнопка "Высота" (если есть варианты)
+    heights = product_specs.get(product_id, {}).get("height", [])
     if heights:
         buttons.append([InlineKeyboardButton("📏 Высота", callback_data=f"height_{product_id}")])
+    
+    # Кнопка "Кол-во поперечных труб" (если есть в спецификациях)
+    if any("Количество поперечных труб" in spec for spec in specs):
+        buttons.append([InlineKeyboardButton("🔢 Кол-во труб", callback_data=f"tubes_{product_id}")])
+    
+    # Кнопка "Защитное покрытие" (если есть варианты)
+    coatings = product.get("coating", [])
     if coatings:
         buttons.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"coating_{product_id}")])
     
-    buttons.extend([
-        [InlineKeyboardButton("🛒 Добавить в корзину", callback_data=f"add_{product_id}")],
-        [InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")]
-    ])
-
+    # Кнопка "Назад"
+    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")])
+    
     await query.edit_message_text(
-        f"📦 <b>{product['name']}</b>\n\nВыберите параметр:",
+        f"📦 <b>{product['name']}</b>{price_message}\nВыберите параметр:",
         reply_markup=InlineKeyboardMarkup(buttons),
         parse_mode="HTML"
     )
