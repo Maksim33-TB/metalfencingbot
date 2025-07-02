@@ -1912,24 +1912,22 @@ async def show_catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     user_id = str(query.from_user.id)
     user_states[user_id] = "CATALOG"
-
+    
     # Формируем кнопки категорий
     keyboard = []
     for cat in categories:
-        button = [InlineKeyboardButton(cat["name"], callback_data=f"cat_{cat['id']}")]
-        keyboard.append(button)
+        keyboard.append([InlineKeyboardButton(cat["name"], callback_data=f"cat_{cat['id']}")])
     
     # Добавляем кнопку "Назад"
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")])
-
+    
     reply_markup = InlineKeyboardMarkup(keyboard)
-
+    
     await query.edit_message_text(
         "📚 <b>Каталог продукции</b>\n\nВыберите категорию:",
         reply_markup=reply_markup,
         parse_mode="HTML"
     )
-
 async def show_category_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
