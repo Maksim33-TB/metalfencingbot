@@ -1842,9 +1842,8 @@ def format_product_message(product, selected_options=None):
 # ========== ОСНОВНЫЕ КОМАНДЫ ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
-    user_carts[user_id] = []  # Инициализация корзины
     user_states[user_id] = "MAIN_MENU"  # Установка состояния
-    user_selections[user_id] = {}  # Сброс выбора пользователя
+    user_selections[user_id] = {}  #
     
     keyboard = [
         [InlineKeyboardButton("🏢 О компании", callback_data="about")],
