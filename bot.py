@@ -1811,7 +1811,6 @@ products = {
 }
 
 # Глобальные переменные для хранения состояния
-user_carts = {}  # Корзины пользователей
 user_states = {}  # Текущие состояния пользователей
 user_selections = {}  # Выборы пользователей
 
@@ -1956,28 +1955,28 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     product_id = query.data.split("_")[1]
     user_id = str(query.from_user.id)
     user_states[user_id] = f"PRODUCT_{product_id}"
-    
-    # Ищем товар
+
+    # Ищем товар по ID
     product = None
-    for category_id in products:
-        for item in products[category_id]:
+    for category in products.values():
+        for item in category:
             if item['id'] == product_id:
                 product = item
                 break
         if product:
             break
-    
+
     if not product:
-        await query.edit_message_text("Товар не найден")
+        await query.edit_message_text("Произошла ошибка при загрузке товара")
         return
-    
+
     # Сохраняем продукт для пользователя
     if user_id not in user_selections:
         user_selections[user_id] = {}
     user_selections[user_id]["product"] = product
     user_selections[user_id]["product_id"] = product_id
     user_selections[user_id]["selected_options"] = {}
-    
+
     # Формируем сообщение с ценами
     price_message = ""
     if isinstance(product.get('price'), dict):
@@ -1988,7 +1987,7 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
             price_message = f"\n💰 Цены: от {min_price} до {max_price} руб./шт\n"
     elif 'price' in product:
         price_message = f"\n💰 Цена: {product['price']} руб./шт\n"
-    
+
     # Формируем кнопки
     buttons = []
     
@@ -2014,10 +2013,12 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if coatings:
         buttons.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"coating_{product_id}")])
     
-    # Кнопка "Назад"
+    # Кнопка заказа
     buttons.append([InlineKeyboardButton("🛒 ЗАКАЗАТЬ", callback_data="confirm_order")])
-    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")])
     
+    # Кнопка "Назад"
+    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")])
+
     await query.edit_message_text(
         f"📦 <b>{product['name']}</b>{price_message}\nВыберите параметр:",
         reply_markup=InlineKeyboardMarkup(buttons),
@@ -2282,7 +2283,7 @@ async def finalize_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in user_selections:
         await query.edit_message_text("Ошибка оформления заказа")
         return
-    
+
     # Формируем сообщение для менеджера
     product = user_selections[user_id]["product"]
     options = user_selections[user_id]["selected_options"]
@@ -2301,7 +2302,7 @@ async def finalize_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     for option, value in options.items():
         manager_message += f"🔹 {option}: {value}\n"
-    
+
     # Отправляем менеджерам
     for admin_id in ADMIN_CHAT_IDS:
         try:
@@ -2312,7 +2313,7 @@ async def finalize_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         except Exception as e:
             logger.error(f"Ошибка при отправке заказа администратору {admin_id}: {e}")
-    
+
     # Отправляем подтверждение клиенту
     confirmation_message = (
         "✅ <b>Благодарим за заказ!</b>\n\n"
@@ -2328,7 +2329,7 @@ async def finalize_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         confirmation_message,
         parse_mode="HTML"
     )
-    
+
     # Очищаем данные
     del user_selections[user_id]
     user_states[user_id] = "MAIN_MENU"
@@ -2439,9 +2440,9 @@ async def handle_quantity_input(update: Update, context: ContextTypes.DEFAULT_TY
     
     # Показываем итоговую информацию
     keyboard = [
-        [InlineKeyboardButton("🛒 Добавить в корзину", callback_data=f"confirm_add_{product_id}")],
-        [InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]
-    ]
+    [InlineKeyboardButton("🛒 ЗАКАЗАТЬ", callback_data="confirm_order")],
+    [InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]
+]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
@@ -2545,10 +2546,10 @@ async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ========== ЗАПУСК БОТА ==========
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
-    
+
     # Обработчики команд
     app.add_handler(CommandHandler("start", start))
-    
+
     # Обработчики callback-запросов
     app.add_handler(CallbackQueryHandler(about_company, pattern="^about$"))
     app.add_handler(CallbackQueryHandler(contacts, pattern="^contacts$"))
@@ -2561,18 +2562,17 @@ def main():
     app.add_handler(CallbackQueryHandler(select_height, pattern="^height_"))
     app.add_handler(CallbackQueryHandler(handle_spec_selection, pattern="^select_spec_"))
     app.add_handler(CallbackQueryHandler(handle_height_selection, pattern="^select_height_"))
-    app.add_handler(CallbackQueryHandler(select_tubes, pattern="^tubes_"))  # Новый обработчик
-    app.add_handler(CallbackQueryHandler(handle_tubes_selection, pattern="^select_tubes_"))  # Новый обработчик
+    app.add_handler(CallbackQueryHandler(select_tubes, pattern="^tubes_"))
+    app.add_handler(CallbackQueryHandler(handle_tubes_selection, pattern="^select_tubes_"))
     app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^select_coating_"))
     app.add_handler(CallbackQueryHandler(enter_ral_color, pattern="^enter_ral_"))
-    app.add_handler(CallbackQueryHandler(confirm_add_to_cart, pattern="^confirm_add_"))
-    app.add_handler(CallbackQueryHandler(confirm_order, pattern="^confirm_order$"))  # Новый обработчик
-    app.add_handler(CallbackQueryHandler(finalize_order, pattern="^finalize_order$"))  # Новый обработчик
-    
-    # Обработчик текстовых сообщений (должен быть последним)
+    app.add_handler(CallbackQueryHandler(confirm_order, pattern="^confirm_order$"))
+    app.add_handler(CallbackQueryHandler(finalize_order, pattern="^finalize_order$"))
+
+    # Обработчик текстовых сообщений
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_order_details))  # Новый обработчик
-    
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_order_details))
+
     # Запуск через Webhook
     app.run_webhook(
         listen="0.0.0.0",
