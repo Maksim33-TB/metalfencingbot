@@ -1909,6 +1909,9 @@ async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def show_catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
+    logger.info(f"Showing catalog for user {query.from_user.id}")
+    logger.info(f"Categories data: {categories}")  # Проверка данных категорий
     
     user_id = str(query.from_user.id)
     user_states[user_id] = "CATALOG"
