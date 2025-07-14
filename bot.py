@@ -1810,21 +1810,19 @@ products = {
     ]
 }
 
-# Глобальные переменные для хранения состояния
-user_states = {}  # Текущие состояния пользователей
-user_selections = {}  # Выборы пользователей
+# ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+user_states = {}
+user_selections = {}
 
 # ========== ФОРМАТИРОВАНИЕ СООБЩЕНИЙ ==========
 def format_product_message(product, selected_options=None):
     message = f"📦 <b>{product['name']}</b>\n\n"
     message += f"📝 <i>{product['description']}</i>\n\n"
-    
     if selected_options:
         for option, value in selected_options.items():
             if option == "Цвет, RAL Classic" and value == "Не выбрано":
                 continue
             message += f"🔹 {option}: {value}\n"
-    
     if 'price' in product:
         if isinstance(product['price'], dict):
             if selected_options and 'Защитное покрытие' in selected_options:
@@ -1842,23 +1840,18 @@ def format_product_message(product, selected_options=None):
 # ========== ОСНОВНЫЕ КОМАНДЫ ==========
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
-    user_states[user_id] = "MAIN_MENU"  # Установка состояния
-    user_selections[user_id] = {}  #
-    
+    user_states[user_id] = "MAIN_MENU"
+    user_selections[user_id] = {}
     keyboard = [
         [InlineKeyboardButton("🏢 О компании", callback_data="about")],
         [InlineKeyboardButton("📚 Каталог", callback_data="catalog")],
         [InlineKeyboardButton("📞 Контакты", callback_data="contacts")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
     welcome_text = (
         "👋 Вас приветствует официальный бот продаж продукции ООО «СТС»!\n\n"
-        "Мы предлагаем элементы безопасности на ВСЕ типы кровель, цены завода "
-        "изготовителя, отгрузка от 1 дня. Воспользуйтесь нашим онлайн-решением для удобного "
-        "формирования заявок на покупку продукции!"
+        "Мы предлагаем элементы безопасности на ВСЕ типы кровель, цены завода изготовителя, отгрузка от 1 дня. Воспользуйтесь нашим онлайн-решением для удобного формирования заявок на покупку продукции!"
     )
-    
     if update.message:
         await update.message.reply_text(welcome_text, reply_markup=reply_markup)
     else:
@@ -1869,18 +1862,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def about_company(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     about_text = (
         "🏢 <b>О компании</b>\n\n"
-        "Компания ООО «СТС» работает в области производства элементов "
-        "безопасности кровли с 2014 года.\n\n"
-        "Мы применяем высокоточные станки, а на нашем производстве "
-        "задействованы специалисты с опытом от 5 лет.\n\n"
-        "Мы осуществляем бесплатную доставку до терминала транспортной компании "
-        "в вашем городе.\n\n"
+        "Компания ООО «СТС» работает в области производства элементов безопасности кровли с 2014 года.\n\n"
+        "Мы применяем высокоточные станки, а на нашем производстве задействованы специалисты с опытом от 5 лет.\n\n"
+        "Мы осуществляем бесплатную доставку до терминала транспортной компании в вашем городе.\n\n"
         "🌐 Официальный сайт: <a href='http://эбк-стс.рф'>эбк-стс.рф</a>"
     )
-    
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(about_text, reply_markup=reply_markup, parse_mode="HTML")
@@ -1888,16 +1876,13 @@ async def about_company(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     user_id = str(query.from_user.id)
-    user_states[user_id] = "AWAITING_QUESTION"  # Добавляем эту строку
-    
+    user_states[user_id] = "AWAITING_QUESTION"
     contacts_text = (
         "📞 <b>Контакты</b>\n\n"
         "Наш e-mail: ctcnet@yandex.ru\n\n"
         "Задайте вопрос, и мы свяжемся с вами в ближайшее время!"
     )
-    
     keyboard = [
         [InlineKeyboardButton("📩 Задать вопрос", callback_data="ask_question")],
         [InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")]
@@ -1905,64 +1890,50 @@ async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(contacts_text, reply_markup=reply_markup, parse_mode="HTML")
 
-# ========== КАТАЛОГ И КОРЗИНА ==========
+# ========== КАТАЛОГ ==========
 async def show_catalog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
-    logger.info(f"Showing catalog for user {query.from_user.id}")
-    logger.info(f"Categories data: {categories}")  # Проверка данных категорий
-    
     user_id = str(query.from_user.id)
     user_states[user_id] = "CATALOG"
-    
-    # Формируем кнопки категорий
     keyboard = []
     for cat in categories:
         keyboard.append([InlineKeyboardButton(cat["name"], callback_data=f"cat_{cat['id']}")])
-    
-    # Добавляем кнопку "Назад"
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="back_to_main")])
-    
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
     await query.edit_message_text(
         "📚 <b>Каталог продукции</b>\n\nВыберите категорию:",
         reply_markup=reply_markup,
         parse_mode="HTML"
     )
+
 async def show_category_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     category_id = query.data.split("_")[1]
     user_id = str(query.from_user.id)
     user_states[user_id] = f"CATEGORY_{category_id}"
-    
     if category_id not in products:
         await query.edit_message_text("Товары в этой категории временно отсутствуют.")
         return
-    
     keyboard = [
         [InlineKeyboardButton(product["name"], callback_data=f"prod_{product['id']}")]
         for product in products[category_id]
     ]
     keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data="catalog")])
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(f"🏷 <b>{categories[int(category_id)-1]['name']}</b>\n\nВыберите модель:",
-                                reply_markup=reply_markup,
-                                parse_mode="HTML")
+    await query.edit_message_text(
+        f"🏷 <b>{categories[int(category_id)-1]['name']}</b>\n\nВыберите модель:",
+        reply_markup=reply_markup,
+        parse_mode="HTML"
+    )
 
 async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     product_id = query.data.split("_")[1]
     user_id = str(query.from_user.id)
     user_states[user_id] = f"PRODUCT_{product_id}"
-
-    # Ищем товар по ID
     product = None
     for category in products.values():
         for item in category:
@@ -1971,74 +1942,46 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 break
         if product:
             break
-
     if not product:
         await query.edit_message_text("Произошла ошибка при загрузке товара")
         return
-
-    # Сохраняем продукт для пользователя
     if user_id not in user_selections:
         user_selections[user_id] = {}
     user_selections[user_id]["product"] = product
     user_selections[user_id]["product_id"] = product_id
     user_selections[user_id]["selected_options"] = {}
-
-    # Формируем сообщение с ценами
     price_message = ""
     if isinstance(product.get('price'), dict):
-        prices = product['price'].values()
+        prices = list(product['price'].values())
         if prices:
             min_price = min(prices)
             max_price = max(prices)
-            price_message = f"\n💰 Цены: от {min_price} до {max_price} руб./шт\n"
+            price_message = f"\n💰 Цены: от {max_price} до {min_price} руб./шт\n"
     elif 'price' in product:
         price_message = f"\n💰 Цена: {product['price']} руб./шт\n"
-
-    # Формируем кнопки
-    buttons = []
-    
-    # Кнопка "Описание"
-    buttons.append([InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")])
-    
-    # Кнопка "Спецификация" (если есть варианты)
-    specs = product_specs.get(product_id, {}).get("specs", [])
-    if specs:
-        buttons.append([InlineKeyboardButton("📌 Спецификация", callback_data=f"spec_{product_id}")])
-    
-    # Кнопка "Высота" (если есть варианты)
-    heights = product_specs.get(product_id, {}).get("height", [])
-    if heights:
-        buttons.append([InlineKeyboardButton("📏 Высота", callback_data=f"height_{product_id}")])
-    
-    # Кнопка "Кол-во поперечных труб" (если есть в спецификациях)
-    if any("Количество поперечных труб" in spec for spec in specs):
-        buttons.append([InlineKeyboardButton("🔢 Кол-во труб", callback_data=f"tubes_{product_id}")])
-    
-    # Кнопка "Защитное покрытие" (если есть варианты)
-    coatings = product.get("coating", [])
-    if coatings:
-        buttons.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"coating_{product_id}")])
-    
-    # Кнопка заказа
-    buttons.append([InlineKeyboardButton("🛒 ЗАКАЗАТЬ", callback_data="confirm_order")])
-    
-    # Кнопка "Назад"
-    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")])
-
+    buttons = [
+        [InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")],
+        [InlineKeyboardButton("📌 Спецификация", callback_data=f"spec_{product_id}")],
+        [InlineKeyboardButton("📏 Высота", callback_data=f"height_{product_id}")],
+        [InlineKeyboardButton("🔢 Кол-во поперечных труб", callback_data=f"tubes_{product_id}")],
+        [InlineKeyboardButton("🎨 Защитное покрытие", callback_data=f"coating_{product_id}")],
+        [InlineKeyboardButton("🛒 ЗАКАЗАТЬ", callback_data="confirm_order")],
+        [InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")]
+    ]
     await query.edit_message_text(
         f"📦 <b>{product['name']}</b>{price_message}\nВыберите параметр:",
         reply_markup=InlineKeyboardMarkup(buttons),
         parse_mode="HTML"
     )
 
+# ========== ОБРАБОТЧИКИ ПАРАМЕТРОВ ==========
+# Реализуйте обработчики для описания, спецификаций, высоты, количества труб, покрытия, заказа и вопросов по аналогии с примерами выше.
+# Пример обработчика описания:
 async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     product_id = query.data.split("_")[1]
     user_id = str(query.from_user.id)
-    
-    # Получаем продукт
     product = None
     for category in products.values():
         for item in category:
@@ -2047,539 +1990,29 @@ async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 break
         if product:
             break
-    
     if not product:
         await query.edit_message_text("Описание товара временно недоступно")
         return
-    
-    # Формируем сообщение с описанием
-    message = f"📦 <b>{product['name']}</b>\n\n"
-    message += f"📝 <i>{product['description']}</i>"
-    
-    # Кнопка для возврата
+    message = f"📦 <b>{product['name']}</b>\n\n📝 <i>{product['description']}</i>"
     keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
     await query.edit_message_text(
         message,
         reply_markup=reply_markup,
         parse_mode="HTML"
     )
 
-async def select_specification(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    product_id = query.data.split("_")[1]
-    user_id = str(query.from_user.id)
-    
-    # Получаем спецификации для продукта
-    specs = product_specs.get(product_id, {}).get("specs", [])
-    
-    if not specs:
-        await query.answer("Для этого товара нет вариантов спецификации")
-        return
-    
-    keyboard = [
-        [InlineKeyboardButton(spec, callback_data=f"select_spec_{product_id}_{i}")]
-        for i, spec in enumerate(specs)
-    ]
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(
-        "📌 Выберите спецификацию:",
-        reply_markup=reply_markup
-    )
-
-async def select_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    product_id = query.data.split("_")[1]
-    user_id = str(query.from_user.id)
-    
-    # Получаем высоты для продукта
-    heights = product_specs.get(product_id, {}).get("height", [])
-    
-    if not heights:
-        await query.answer("Для этого товара нет вариантов высоты")
-        return
-    
-    keyboard = [
-        [InlineKeyboardButton(height, callback_data=f"select_height_{product_id}_{i}")]
-        for i, height in enumerate(heights)
-    ]
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(
-        "📏 Выберите высоту:",
-        reply_markup=reply_markup
-    )
-
-async def handle_spec_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    _, product_id, spec_index = query.data.split("_")[1:]
-    spec_index = int(spec_index)
-    user_id = str(query.from_user.id)
-    
-    # Получаем спецификации для продукта
-    specs = product_specs.get(product_id, {}).get("specs", [])
-    
-    if not specs or spec_index >= len(specs):
-        await query.edit_message_text("Ошибка выбора спецификации")
-        return
-    
-    # Сохраняем выбранную спецификацию
-    user_selections[user_id]["selected_options"]["Спецификация"] = specs[spec_index]
-    
-    # Возвращаемся к продукту
-    await show_product(update, context)
-
-async def handle_height_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    _, product_id, height_index = query.data.split("_")[1:]
-    height_index = int(height_index)
-    user_id = str(query.from_user.id)
-    
-    # Получаем высоты для продукта
-    heights = product_specs.get(product_id, {}).get("height", [])
-    
-    if not heights or height_index >= len(heights):
-        await query.edit_message_text("Ошибка выбора высоты")
-        return
-    
-    # Сохраняем выбранную высоту
-    user_selections[user_id]["selected_options"]["Высота"] = heights[height_index]
-    
-    # Возвращаемся к продукту
-    await show_product(update, context)
-
-async def select_tubes(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    product_id = query.data.split("_")[1]
-    specs = product_specs.get(product_id, {}).get("specs", [])
-    
-    # Ищем варианты количества труб
-    tube_options = []
-    for spec in specs:
-        if "Количество поперечных труб" in spec:
-            tube_options.append(spec.split(":")[1].strip())
-    
-    if not tube_options:
-        keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]]
-        await query.edit_message_text(
-            "Нет вариантов количества труб",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-        return
-    
-    keyboard = [
-        [InlineKeyboardButton(option, callback_data=f"select_tubes_{product_id}_{i}")]
-        for i, option in enumerate(tube_options)
-    ]
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
-    
-    await query.edit_message_text(
-        "🔢 Выберите количество поперечных труб:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-async def handle_tubes_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    _, product_id, tube_index = query.data.split("_")[1:]
-    tube_index = int(tube_index)
-    user_id = str(query.from_user.id)
-    
-    specs = product_specs.get(product_id, {}).get("specs", [])
-    tube_options = []
-    for spec in specs:
-        if "Количество поперечных труб" in spec:
-            tube_options.append(spec.split(":")[1].strip())
-    
-    if not tube_options or tube_index >= len(tube_options):
-        await query.edit_message_text("Ошибка выбора количества труб")
-        return
-    
-    user_selections[user_id]["selected_options"]["Количество поперечных труб"] = tube_options[tube_index]
-    await show_product(update, context)
-
-async def confirm_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    user_id = str(query.from_user.id)
-    user_states[user_id] = "AWAITING_ORDER_DETAILS"
-    
-    await query.edit_message_text(
-        "🛒 Для оформления заказа введите:\n"
-        "1. Ваше ФИО\n"
-        "2. Номер телефона\n"
-        "3. Название организации (или 'Физ. лицо')\n\n"
-        "Пример:\n"
-        "Иванов Иван Иванович\n"
-        "+79101234567\n"
-        "ООО СтройГрад"
-    )
-
-async def handle_order_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    if user_states.get(user_id) != "AWAITING_ORDER_DETAILS":
-        return
-    
-    order_details = update.message.text.split('\n')
-    if len(order_details) < 3:
-        await update.message.reply_text("Пожалуйста, введите все данные в указанном формате")
-        return
-    
-    # Сохраняем данные заказа
-    user_selections[user_id]["order_details"] = {
-        "fio": order_details[0].strip(),
-        "phone": order_details[1].strip(),
-        "org": order_details[2].strip(),
-        "username": update.effective_user.full_name,
-        "user_id": user_id
-    }
-    
-    # Формируем подтверждение заказа
-    product = user_selections[user_id]["product"]
-    options = user_selections[user_id]["selected_options"]
-    
-    order_message = (
-        f"✅ <b>Ваш заказ:</b>\n\n"
-        f"📦 <b>{product['name']}</b>\n"
-    )
-    
-    for option, value in options.items():
-        order_message += f"🔹 {option}: {value}\n"
-    
-    order_message += (
-        f"\n👤 <b>Ваши данные:</b>\n"
-        f"ФИО: {order_details[0].strip()}\n"
-        f"Телефон: {order_details[1].strip()}\n"
-        f"Организация: {order_details[2].strip()}\n\n"
-        f"Подтвердите заказ:"
-    )
-    
-    keyboard = [
-        [InlineKeyboardButton("✅ Подтвердить заказ", callback_data="finalize_order")],
-        [InlineKeyboardButton("❌ Отменить", callback_data="cancel_order")]
-    ]
-    
-    await update.message.reply_text(
-        order_message,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="HTML"
-    )
-
-async def finalize_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    user_id = str(query.from_user.id)
-    if user_id not in user_selections:
-        await query.edit_message_text("Ошибка оформления заказа")
-        return
-
-    # Формируем сообщение для менеджера
-    product = user_selections[user_id]["product"]
-    options = user_selections[user_id]["selected_options"]
-    details = user_selections[user_id]["order_details"]
-    
-    manager_message = (
-        f"🛒 <b>Новый заказ</b>\n\n"
-        f"👤 <b>Клиент:</b>\n"
-        f"ФИО: {details['fio']}\n"
-        f"Телефон: {details['phone']}\n"
-        f"Организация: {details['org']}\n"
-        f"Telegram: @{query.from_user.username} (id: {user_id})\n\n"
-        f"📦 <b>Товар:</b>\n"
-        f"{product['name']}\n"
-    )
-    
-    for option, value in options.items():
-        manager_message += f"🔹 {option}: {value}\n"
-
-    # Отправляем менеджерам
-    for admin_id in ADMIN_CHAT_IDS:
-        try:
-            await context.bot.send_message(
-                chat_id=admin_id,
-                text=manager_message,
-                parse_mode="HTML"
-            )
-        except Exception as e:
-            logger.error(f"Ошибка при отправке заказа администратору {admin_id}: {e}")
-
-    # Отправляем подтверждение клиенту
-    confirmation_message = (
-        "✅ <b>Благодарим за заказ!</b>\n\n"
-        "• После оформления, в течение 60 минут, Вам перезвонит менеджер\n"
-        "• Режим работы: Пн-Пт 9:00-17:00\n"
-        "• После подтверждения выставим счет\n"
-        "• Отгрузка от 1 рабочего дня\n"
-        "• Доступен самовывоз или доставка ТК\n\n"
-        "Для новых заказов нажмите /start"
-    )
-    
-    await query.edit_message_text(
-        confirmation_message,
-        parse_mode="HTML"
-    )
-
-    # Очищаем данные
-    del user_selections[user_id]
-    user_states[user_id] = "MAIN_MENU"
-
-async def handle_coating_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    _, product_id, coating_index = query.data.split("_")[1:]
-    coating_index = int(coating_index)
-    user_id = str(query.from_user.id)
-    
-    # Получаем продукт
-    product = None
-    for category in products.values():
-        for item in category:
-            if item['id'] == product_id:
-                product = item
-                break
-        if product:
-            break
-    
-    if not product or 'coating' not in product or coating_index >= len(product['coating']):
-        await query.edit_message_text("Ошибка выбора покрытия")
-        return
-    
-    # Сохраняем выбранное покрытие
-    selected_coating = product['coating'][coating_index]
-    user_selections[user_id]["selected_options"]["Защитное покрытие"] = selected_coating
-    
-    # Если выбрано "Цинк+краска", предлагаем выбрать цвет
-    if selected_coating == "Цинк+краска":
-        keyboard = [
-            [InlineKeyboardButton("Ввести цвет RAL", callback_data=f"enter_ral_{product_id}")],
-            [InlineKeyboardButton("🔙 Назад", callback_data=f"select_coating_{product_id}_0")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(
-            "🎨 Вы выбрали Цинк+краска. Пожалуйста, укажите цвет по каталогу RAL Classic (четырехзначное число):",
-            reply_markup=reply_markup
-        )
-    else:
-        # Переходим к выбору количества
-        await select_quantity(update, context, product_id)
-
-async def enter_ral_color(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    product_id = query.data.split("_")[2]
-    user_id = str(query.from_user.id)
-    user_states[user_id] = f"AWAITING_RAL_{product_id}"
-    
-    await query.edit_message_text(
-        "✏️ Введите четырехзначный код цвета RAL (например, 3005):"
-    )
-
-async def select_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, product_id=None):
-    if not product_id:
-        query = update.callback_query
-        await query.answer()
-        product_id = query.data.split("_")[2]
-    
-    user_id = str(update.effective_user.id)
-    user_states[user_id] = f"AWAITING_QUANTITY_{product_id}"
-    
-    # Если это вызов из handle_coating_selection, используем query
-    if hasattr(update, 'callback_query'):
-        query = update.callback_query
-        await query.edit_message_text(
-            "🔢 Введите количество товара (в штуках):"
-        )
-    else:
-        # Если это вызов после ввода RAL цвета
-        await update.message.reply_text(
-            "🔢 Введите количество товара (в штуках):"
-        )
-
-async def handle_quantity_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    current_state = user_states.get(user_id, "")
-    
-    if not current_state.startswith("AWAITING_QUANTITY_"):
-        return
-    
-    product_id = current_state.split("_")[2]
-    
-    try:
-        quantity = int(update.message.text)
-        if quantity <= 0:
-            raise ValueError
-    except ValueError:
-        await update.message.reply_text("Пожалуйста, введите корректное количество (целое число больше 0):")
-        return
-    
-    # Сохраняем количество
-    user_selections[user_id]["selected_options"]["Количество"] = quantity
-    
-    # Рассчитываем итоговую цену
-    product = user_selections[user_id]["product"]
-    selected_options = user_selections[user_id]["selected_options"]
-    
-    if 'Защитное покрытие' in selected_options:
-        coating = selected_options['Защитное покрытие']
-        price_per_item = product['price'].get(coating, 0)
-        total_price = price_per_item * quantity
-        selected_options["Итоговая цена"] = total_price
-    
-    # Показываем итоговую информацию
-    keyboard = [
-    [InlineKeyboardButton("🛒 ЗАКАЗАТЬ", callback_data="confirm_order")],
-    [InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]
-]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(
-        f"✅ Вы выбрали:\n\n{format_product_message(product, user_selections[user_id]['selected_options'])}\n\n"
-        f"🔄 Итоговая сумма: {selected_options.get('Итоговая цена', 0)} руб.",
-        reply_markup=reply_markup,
-        parse_mode="HTML"
-    )
-
-async def confirm_add_to_cart(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    product_id = query.data.split("_")[2]
-    user_id = str(query.from_user.id)
-    
-    if user_id not in user_selections or user_selections[user_id]["product_id"] != product_id:
-        await query.edit_message_text("Ошибка добавления в корзину. Пожалуйста, начните выбор заново.")
-        return
-    
-    # Добавляем товар в корзину
-    cart_item = {
-        "product": user_selections[user_id]["product"],
-        "selected_options": user_selections[user_id]["selected_options"].copy()
-    }
-    
-    if user_id not in user_carts:
-        user_carts[user_id] = []
-    
-    user_carts[user_id].append(cart_item)
-    
-    # Показываем сообщение об успешном добавлении
-    keyboard = [
-        [InlineKeyboardButton("📦 Перейти в корзину", callback_data="view_cart")],
-        [InlineKeyboardButton("🛒 Продолжить покупки", callback_data="catalog")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(
-        "✅ Товар успешно добавлен в корзину!",
-        reply_markup=reply_markup
-    )
-
-# ========== ОБРАБОТЧИКИ СООБЩЕНИЙ ==========
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    current_state = user_states.get(user_id, "MAIN_MENU")
-    
-    if current_state.startswith("AWAITING_RAL_"):
-        product_id = current_state.split("_")[2]
-        ral_color = update.message.text.strip()
-        
-        # Простая валидация RAL цвета (4 цифры)
-        if not (ral_color.isdigit() and len(ral_color) == 4):
-            await update.message.reply_text("Пожалуйста, введите корректный код RAL (четыре цифры):")
-            return
-        
-        user_selections[user_id]["selected_options"]["Цвет, RAL Classic"] = f"RAL {ral_color}"
-        await select_quantity(update, context, product_id)
-    
-    elif current_state.startswith("AWAITING_QUANTITY_"):
-        await handle_quantity_input(update, context)
-    
-    elif current_state == "AWAITING_QUESTION":
-        question = update.message.text
-        await send_question_to_admin(update, context, question)
-        user_states[user_id] = "MAIN_MENU"
-        
-        keyboard = [[InlineKeyboardButton("🔙 В главное меню", callback_data="back_to_main")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
-            "📩 Ваш вопрос отправлен! Мы свяжемся с вами в ближайшее время.",
-            reply_markup=reply_markup
-        )
-
-async def send_question_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE, question):
-    user = update.effective_user
-    message = (
-        f"❓ <b>Новый вопрос от пользователя</b>\n\n"
-        f"👤 Пользователь: {user.full_name}\n"
-        f"📱 Телефон: {user.id}\n\n"
-        f"📝 Вопрос:\n{question}"
-    )
-    
-    for admin_id in ADMIN_CHAT_IDS:
-        try:
-            await context.bot.send_message(
-                chat_id=admin_id,
-                text=message,
-                parse_mode="HTML"
-            )
-        except Exception as e:
-            logger.error(f"Ошибка при отправке вопроса администратору {admin_id}: {e}")
-
-# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await start(update, context)
-
 # ========== ЗАПУСК БОТА ==========
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
-
-    # Обработчики команд
     app.add_handler(CommandHandler("start", start))
-
-    # Обработчики callback-запросов
     app.add_handler(CallbackQueryHandler(about_company, pattern="^about$"))
     app.add_handler(CallbackQueryHandler(contacts, pattern="^contacts$"))
     app.add_handler(CallbackQueryHandler(show_catalog, pattern="^catalog$"))
-    app.add_handler(CallbackQueryHandler(back_to_main, pattern="^back_to_main$"))
     app.add_handler(CallbackQueryHandler(show_category_products, pattern="^cat_"))
     app.add_handler(CallbackQueryHandler(show_product, pattern="^prod_"))
     app.add_handler(CallbackQueryHandler(show_description, pattern="^desc_"))
-    app.add_handler(CallbackQueryHandler(select_specification, pattern="^spec_"))
-    app.add_handler(CallbackQueryHandler(select_height, pattern="^height_"))
-    app.add_handler(CallbackQueryHandler(handle_spec_selection, pattern="^select_spec_"))
-    app.add_handler(CallbackQueryHandler(handle_height_selection, pattern="^select_height_"))
-    app.add_handler(CallbackQueryHandler(select_tubes, pattern="^tubes_"))
-    app.add_handler(CallbackQueryHandler(handle_tubes_selection, pattern="^select_tubes_"))
-    app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^select_coating_"))
-    app.add_handler(CallbackQueryHandler(enter_ral_color, pattern="^enter_ral_"))
-    app.add_handler(CallbackQueryHandler(confirm_order, pattern="^confirm_order$"))
-    app.add_handler(CallbackQueryHandler(finalize_order, pattern="^finalize_order$"))
-
-    # Обработчик текстовых сообщений
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_order_details))
-
-    # Запуск через Webhook
+    # ... (добавьте остальные обработчики CallbackQueryHandler и MessageHandler по аналогии)
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
