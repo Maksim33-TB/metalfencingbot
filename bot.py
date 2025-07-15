@@ -14,7 +14,9 @@ from datetime import datetime
 # Настройка логирования
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.INFO,
+    filename='bot.log',  # Логи будут сохраняться в файл
+    filemode='a'  # Режим добавления в файл
 )
 logger = logging.getLogger(__name__)
 
@@ -1962,27 +1964,27 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(query.from_user.id)
     user_states[user_id] = f"PRODUCT_{product_id}"
 
-    # Ищем товар по ID во всех категориях
+    # Добавим логирование для отладки
+    logger.info(f"Searching for product ID: {product_id}")
+    logger.info(f"Available categories: {list(products.keys())}")
+
+    # Ищем товар во всех категориях
     product = None
     category_id = None
     
-    # Проверяем формат ID товара
-    if "_" in product_id:
-        try:
-            category_id, item_id = product_id.split("_")
-            category_products = products.get(category_id, [])
-            product = next((item for item in category_products if item['id'] == product_id), None)
-        except Exception as e:
-            logger.error(f"Error finding product {product_id}: {e}")
-    else:
-        # Если ID не содержит подчеркивания, ищем во всех категориях
-        for cat_id, category_items in products.items():
-            product = next((item for item in category_items if item['id'] == product_id), None)
-            if product:
+    for cat_id, category_items in products.items():
+        for item in category_items:
+            if item['id'] == product_id:
+                product = item
                 category_id = cat_id
+                logger.info(f"Found product: {product['name']} in category {cat_id}")
                 break
+        if product:
+            break
 
     if not product:
+        logger.error(f"Product not found: {product_id}")
+        logger.error(f"Sample product IDs: {[item['id'] for cat in products.values() for item in cat][:5]}")
         await query.edit_message_text("Произошла ошибка при загрузке товара")
         return
 
@@ -2023,9 +2025,8 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if product.get("coating"):
         buttons.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"coating_{product_id}")])
     
-    # Кнопка "Назад" (используем category_id, если он найден)
-    back_data = f"cat_{category_id}" if category_id else "catalog"
-    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=back_data)])
+    # Кнопка "Назад"
+    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{category_id}")])
 
     await query.edit_message_text(
         f"📦 <b>{product['name']}</b>{price_message}\nВыберите параметр:",
@@ -2555,33 +2556,26 @@ async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # Обработчики команд
+    # Основные обработчики
     app.add_handler(CommandHandler("start", start))
-
-    # Обработчики callback-запросов
     app.add_handler(CallbackQueryHandler(about_company, pattern="^about$"))
     app.add_handler(CallbackQueryHandler(contacts, pattern="^contacts$"))
     app.add_handler(CallbackQueryHandler(show_catalog, pattern="^catalog$"))
     app.add_handler(CallbackQueryHandler(back_to_main, pattern="^back_to_main$"))
+    
+    # Обработчики для работы с товарами
     app.add_handler(CallbackQueryHandler(show_category_products, pattern="^cat_"))
     app.add_handler(CallbackQueryHandler(show_product, pattern="^prod_"))
     app.add_handler(CallbackQueryHandler(show_description, pattern="^desc_"))
     app.add_handler(CallbackQueryHandler(select_specification, pattern="^spec_"))
     app.add_handler(CallbackQueryHandler(select_height, pattern="^height_"))
-    app.add_handler(CallbackQueryHandler(handle_spec_selection, pattern="^select_spec_"))
-    app.add_handler(CallbackQueryHandler(handle_height_selection, pattern="^select_height_"))
     app.add_handler(CallbackQueryHandler(select_tubes, pattern="^tubes_"))
-    app.add_handler(CallbackQueryHandler(handle_tubes_selection, pattern="^select_tubes_"))
-    app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^select_coating_"))
-    app.add_handler(CallbackQueryHandler(enter_ral_color, pattern="^enter_ral_"))
-    app.add_handler(CallbackQueryHandler(confirm_order, pattern="^confirm_order$"))
-    app.add_handler(CallbackQueryHandler(finalize_order, pattern="^finalize_order$"))
-
-    # Обработчик текстовых сообщений
+    app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^coating_"))
+    
+    # Обработчики текстовых сообщений
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_order_details))
-
-    # Запуск через Webhook
+    
+    # Запуск бота
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
