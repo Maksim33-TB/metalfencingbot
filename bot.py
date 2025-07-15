@@ -2007,7 +2007,6 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Критическая ошибка: {str(e)}")
         await query.edit_message_text("🚫 Ошибка загрузки данных. Попробуйте позже.")
-    )
 
 async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
