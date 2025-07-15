@@ -1959,33 +1959,35 @@ async def show_category_products(update: Update, context: ContextTypes.DEFAULT_T
 async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
-    product_id = query.data.split("_")[1]
-    user_id = str(query.from_user.id)
-    user_states[user_id] = f"PRODUCT_{product_id}"
-
-    # Добавим логирование для отладки
-    logger.info(f"Searching for product ID: {product_id}")
-    logger.info(f"Available categories: {list(products.keys())}")
-
-    # Ищем товар во всех категориях
-    product = None
-    category_id = None
     
-    for cat_id, category_items in products.items():
-        for item in category_items:
+    # Получаем полный callback_data (например "prod_1_1")
+    callback_data = query.data
+    parts = callback_data.split('_')
+    
+    # Проверяем формат callback_data
+    if len(parts) != 3:
+        await query.edit_message_text("Ошибка: неверный формат запроса товара")
+        return
+    
+    product_id = f"{parts[1]}_{parts[2]}"  # Формируем ID вида "1_1"
+    user_id = str(query.from_user.id)
+    
+    # Поиск товара во всех категориях
+    product = None
+    for category in products.values():
+        for item in category:
             if item['id'] == product_id:
                 product = item
-                category_id = cat_id
-                logger.info(f"Found product: {product['name']} in category {cat_id}")
                 break
         if product:
             break
 
     if not product:
-        logger.error(f"Product not found: {product_id}")
-        logger.error(f"Sample product IDs: {[item['id'] for cat in products.values() for item in cat][:5]}")
-        await query.edit_message_text("Произошла ошибка при загрузке товара")
+        error_msg = (
+            f"Товар с ID {product_id} не найден.\n"
+            f"Доступные ID: {[item['id'] for cat in products.values() for item in cat][:10]}..."
+        )
+        await query.edit_message_text(error_msg)
         return
 
     # Сохраняем продукт для пользователя
@@ -2556,14 +2558,16 @@ async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # Основные обработчики
+    # Основные обработчики команд
     app.add_handler(CommandHandler("start", start))
+    
+    # Обработчики callback-запросов (должны быть ДО текстовых обработчиков)
     app.add_handler(CallbackQueryHandler(about_company, pattern="^about$"))
     app.add_handler(CallbackQueryHandler(contacts, pattern="^contacts$"))
     app.add_handler(CallbackQueryHandler(show_catalog, pattern="^catalog$"))
     app.add_handler(CallbackQueryHandler(back_to_main, pattern="^back_to_main$"))
     
-    # Обработчики для работы с товарами
+    # Обработчики для работы с товарами (важно сохранить этот порядок)
     app.add_handler(CallbackQueryHandler(show_category_products, pattern="^cat_"))
     app.add_handler(CallbackQueryHandler(show_product, pattern="^prod_"))
     app.add_handler(CallbackQueryHandler(show_description, pattern="^desc_"))
@@ -2572,10 +2576,14 @@ def main():
     app.add_handler(CallbackQueryHandler(select_tubes, pattern="^tubes_"))
     app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^coating_"))
     
-    # Обработчики текстовых сообщений
+    # Обработчики текстовых сообщений (должны быть ПОСЛЕ callback-обработчиков)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_order_details))
     
-    # Запуск бота
+    # Обработка ошибок
+    app.add_error_handler(error_handler)
+    
+    # Запуск бота через webhook
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
