@@ -1962,18 +1962,25 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(query.from_user.id)
     user_states[user_id] = f"PRODUCT_{product_id}"
 
-    # Ищем товар по ID в структуре products
+    # Ищем товар по ID во всех категориях
     product = None
-    category_id, item_id = product_id.split("_")
+    category_id = None
     
-    try:
-        category_products = products.get(category_id, [])
-        for item in category_products:
-            if item['id'] == product_id:
-                product = item
+    # Проверяем формат ID товара
+    if "_" in product_id:
+        try:
+            category_id, item_id = product_id.split("_")
+            category_products = products.get(category_id, [])
+            product = next((item for item in category_products if item['id'] == product_id), None)
+        except Exception as e:
+            logger.error(f"Error finding product {product_id}: {e}")
+    else:
+        # Если ID не содержит подчеркивания, ищем во всех категориях
+        for cat_id, category_items in products.items():
+            product = next((item for item in category_items if item['id'] == product_id), None)
+            if product:
+                category_id = cat_id
                 break
-    except Exception as e:
-        logger.error(f"Error finding product {product_id}: {e}")
 
     if not product:
         await query.edit_message_text("Произошла ошибка при загрузке товара")
@@ -2016,8 +2023,9 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if product.get("coating"):
         buttons.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"coating_{product_id}")])
     
-    # Кнопка "Назад"
-    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{category_id}")])
+    # Кнопка "Назад" (используем category_id, если он найден)
+    back_data = f"cat_{category_id}" if category_id else "catalog"
+    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=back_data)])
 
     await query.edit_message_text(
         f"📦 <b>{product['name']}</b>{price_message}\nВыберите параметр:",
