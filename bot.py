@@ -9,14 +9,9 @@ from telegram.ext import (
 )
 import os
 import logging
-from datetime import datetime
-
-# Настройка логирования
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO,
-    filename='bot.log',  # Логи будут сохраняться в файл
-    filemode='a'  # Режим добавления в файл
+    level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
@@ -1960,80 +1955,58 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    # Получаем полный callback_data (например "prod_1_1")
-    callback_data = query.data
-    parts = callback_data.split('_')
-    
-    # Проверяем формат callback_data
-    if len(parts) != 3:
-        await query.edit_message_text("Ошибка: неверный формат запроса товара")
-        return
-    
-    product_id = f"{parts[1]}_{parts[2]}"  # Формируем ID вида "1_1"
-    user_id = str(query.from_user.id)
-    
-    # Поиск товара во всех категориях
-    product = None
-    for category in products.values():
-        for item in category:
-            if item['id'] == product_id:
-                product = item
+    try:
+        # Получаем ID продукта (формат "prod_1_1" -> "1_1")
+        product_id = query.data.split('_')[1] + "_" + query.data.split('_')[2]
+        user_id = str(query.from_user.id)
+        
+        # Логирование для отладки
+        logger.info(f"Ищем товар с ID: {product_id}")
+        logger.info(f"Доступные категории: {list(products.keys())}")
+
+        # Поиск товара
+        product = None
+        for cat_id, category_items in products.items():
+            for item in category_items:
+                if item['id'] == product_id:
+                    product = item
+                    logger.info(f"Найден товар: {product['name']}")
+                    break
+            if product:
                 break
-        if product:
-            break
 
-    if not product:
-        error_msg = (
-            f"Товар с ID {product_id} не найден.\n"
-            f"Доступные ID: {[item['id'] for cat in products.values() for item in cat][:10]}..."
+        if not product:
+            available_ids = [item['id'] for cat in products.values() for item in cat]
+            logger.error(f"Товар не найден. Доступные ID: {available_ids}")
+            await query.edit_message_text("⚠️ Товар временно недоступен")
+            return
+
+        # Формируем сообщение
+        price_message = ""
+        if isinstance(product.get('price'), dict):
+            prices = [p for p in product['price'].values() if isinstance(p, (int, float))]
+            price_message = f"\n💰 Цены: от {min(prices)} до {max(prices)} руб./шт\n"
+        elif isinstance(product.get('price'), (int, float)):
+            price_message = f"\n💰 Цена: {product['price']} руб./шт\n"
+
+        # Создаем кнопки
+        buttons = [
+            [InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")],
+            [InlineKeyboardButton("📏 Высота", callback_data=f"height_{product_id}")],
+            [InlineKeyboardButton("🔢 Кол-во труб", callback_data=f"tubes_{product_id}")],
+            [InlineKeyboardButton("🎨 Покрытие", callback_data=f"coating_{product_id}")],
+            [InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{product_id.split('_')[0]}")]
+        ]
+
+        await query.edit_message_text(
+            f"📦 <b>{product['name']}</b>{price_message}\nВыберите параметр:",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode="HTML"
         )
-        await query.edit_message_text(error_msg)
-        return
 
-    # Сохраняем продукт для пользователя
-    if user_id not in user_selections:
-        user_selections[user_id] = {}
-    user_selections[user_id]["product"] = product
-    user_selections[user_id]["product_id"] = product_id
-    user_selections[user_id]["selected_options"] = {}
-
-    # Формируем сообщение с ценами
-    price_message = ""
-    if isinstance(product.get('price'), dict):
-        prices = [price for price in product['price'].values() if isinstance(price, (int, float))]
-        if prices:
-            min_price = min(prices)
-            max_price = max(prices)
-            price_message = f"\n💰 Цены: от {min_price} до {max_price} руб./шт\n"
-    elif isinstance(product.get('price'), (int, float)):
-        price_message = f"\n💰 Цена: {product['price']} руб./шт\n"
-
-    # Формируем кнопки меню
-    buttons = []
-    
-    # Кнопка "Описание"
-    buttons.append([InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")])
-    
-    # Кнопка "Высота" (если есть варианты)
-    if product_specs.get(product_id, {}).get("height"):
-        buttons.append([InlineKeyboardButton("📏 Высота", callback_data=f"height_{product_id}")])
-    
-    # Кнопка "Кол-во поперечных труб" (если есть в спецификациях)
-    specs = product_specs.get(product_id, {}).get("specs", [])
-    if any("Количество поперечных труб" in str(spec) for spec in specs):
-        buttons.append([InlineKeyboardButton("🔢 Кол-во труб", callback_data=f"tubes_{product_id}")])
-    
-    # Кнопка "Защитное покрытие" (если есть варианты)
-    if product.get("coating"):
-        buttons.append([InlineKeyboardButton("🎨 Покрытие", callback_data=f"coating_{product_id}")])
-    
-    # Кнопка "Назад"
-    buttons.append([InlineKeyboardButton("🔙 Назад", callback_data=f"cat_{category_id}")])
-
-    await query.edit_message_text(
-        f"📦 <b>{product['name']}</b>{price_message}\nВыберите параметр:",
-        reply_markup=InlineKeyboardMarkup(buttons),
-        parse_mode="HTML"
+    except Exception as e:
+        logger.error(f"Критическая ошибка: {str(e)}")
+        await query.edit_message_text("🚫 Ошибка загрузки данных. Попробуйте позже.")
     )
 
 async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2553,6 +2526,11 @@ async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     await start(update, context)
+
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.error(f"Ошибка: {context.error}")
+    if update.callback_query:
+        await update.callback_query.answer("Произошла ошибка, попробуйте еще раз")
 
 # ========== ЗАПУСК БОТА ==========
 def main():
