@@ -2614,7 +2614,7 @@ def main():
     app.add_handler(CallbackQueryHandler(show_description, pattern="^desc_"))
     app.add_handler(CallbackQueryHandler(select_specification, pattern="^spec_"))
     app.add_handler(CallbackQueryHandler(select_height, pattern="^height_"))
-app.add_handler(CallbackQueryHandler(handle_height_selection, pattern="^select_height_"))
+    app.add_handler(CallbackQueryHandler(handle_height_selection, pattern="^select_height_"))
     app.add_handler(CallbackQueryHandler(select_tubes, pattern="^tubes_"))
     app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^coating_"))
     
