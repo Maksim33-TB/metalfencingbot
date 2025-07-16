@@ -9,9 +9,12 @@ from telegram.ext import (
 )
 import os
 import logging
+import logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.INFO,
+    filename='bot.log',
+    filemode='a'
 )
 logger = logging.getLogger(__name__)
 
@@ -2013,9 +2016,13 @@ async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     try:
-        product_id = query.data.split('_')[1]  # Получаем ID из "desc_1_1"
+        # Получаем полный ID вида "2_2" из "desc_2_2"
+        product_id = '_'.join(query.data.split('_')[1:3])
         
-        # Находим товар
+        # Логирование для отладки
+        logger.info(f"Ищем описание для товара ID: {product_id}")
+        
+        # Ищем товар во всех категориях
         product = None
         for category in products.values():
             for item in category:
@@ -2025,23 +2032,32 @@ async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if product:
                 break
 
-        if not product or 'description' not in product:
-            await query.edit_message_text("Описание временно недоступно")
+        if not product:
+            logger.error(f"Товар {product_id} не найден при запросе описания")
+            await query.edit_message_text("Товар не найден")
+            return
+            
+        if 'description' not in product:
+            logger.error(f"Нет описания у товара {product_id}")
+            await query.edit_message_text("Описание отсутствует")
             return
 
-        # Создаем кнопку "Назад"
-        keyboard = [
-            [InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]
-        ]
+        # Форматируем описание
+        description = product['description']
+        if isinstance(description, tuple):  # Если описание в виде кортежа
+            description = ''.join(description)
+            
+        # Кнопка возврата
+        keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]]
         
         await query.edit_message_text(
-            f"📦 <b>{product['name']}</b>\n\n{product['description']}",
+            f"📋 <b>{product['name']}</b>\n\n{description}",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="HTML"
         )
 
     except Exception as e:
-        logger.error(f"Ошибка в show_description: {e}")
+        logger.error(f"Ошибка в show_description: {str(e)}")
         await query.edit_message_text("Ошибка загрузки описания")
 
 async def select_specification(update: Update, context: ContextTypes.DEFAULT_TYPE):
