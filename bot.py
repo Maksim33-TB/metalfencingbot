@@ -2123,7 +2123,6 @@ async def select_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton(height, callback_data=f"select_height_{product_id}_{height}")])
         
         keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
-        (
         
         await query.edit_message_text(
             "📏 Выберите высоту:",
