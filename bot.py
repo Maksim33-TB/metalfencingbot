@@ -2090,27 +2090,72 @@ async def select_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    product_id = query.data.split("_")[1]
-    user_id = str(query.from_user.id)
+    try:
+        product_id = '_'.join(query.data.split('_')[1:3])  # Получаем "2_6"
+        
+        # Логирование для отладки
+        logger.info(f"Запрошены высоты для товара: {product_id}")
+        
+        # Получаем спецификации товара
+        product_spec = product_specs.get(product_id, {})
+        if not product_spec:
+            logger.error(f"Нет спецификаций для товара {product_id}")
+            await query.answer("Для этого товара нет вариантов высоты")
+            return
+            
+        # Получаем доступные высоты из specs
+        heights = []
+        if 'specs' in product_spec:
+            heights = [h for h in product_spec['specs'].keys() if 'Высота' in h]
+        
+        if not heights:
+            # Альтернативный вариант, если высоты хранятся в product_spec
+            heights = product_spec.get('height', [])
+        
+        if not heights:
+            logger.error(f"Нет вариантов высоты для {product_id}")
+            await query.answer("Нет доступных вариантов высоты")
+            return
+
+        # Создаем кнопки для выбора высоты
+        keyboard = []
+        for height in heights:
+            keyboard.append([InlineKeyboardButton(height, callback_data=f"select_height_{product_id}_{height}")])
+        
+        keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
+        
+        await query.edit_message_text(
+            "📏 Выберите высоту:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+            
+    except Exception as e:
+        logger.error(f"Ошибка в select_height: {str(e)}")
+        await query.answer("Ошибка загрузки вариантов высоты")
+
+async def handle_height_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
     
-    # Получаем высоты для продукта
-    heights = product_specs.get(product_id, {}).get("height", [])
-    
-    if not heights:
-        await query.answer("Для этого товара нет вариантов высоты")
-        return
-    
-    keyboard = [
-        [InlineKeyboardButton(height, callback_data=f"select_height_{product_id}_{i}")]
-        for i, height in enumerate(heights)
-    ]
-    keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(
-        "📏 Выберите высоту:",
-        reply_markup=reply_markup
-    )
+    try:
+        # Формат callback_data: "select_height_2_6_Высота 600 мм"
+        *_, product_id, height = query.data.split('_')
+        product_id = '_'.join(product_id.split('_')[:2])  # На случай, если в height есть подчеркивания
+        
+        user_id = str(query.from_user.id)
+        if user_id not in user_selections:
+            user_selections[user_id] = {}
+            
+        # Сохраняем выбранную высоту
+        user_selections[user_id]["selected_options"] = {
+            "Высота": height
+        }
+        
+        # Возвращаемся к товару
+        await show_product(update, context)
+        
+    except Exception as e:
+        logger.error(f"Ошибка выбора высоты: {str(e)}")
+        await query.answer("Ошибка выбора высоты")
 
 async def handle_spec_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -2567,6 +2612,7 @@ def main():
     app.add_handler(CallbackQueryHandler(show_description, pattern="^desc_"))
     app.add_handler(CallbackQueryHandler(select_specification, pattern="^spec_"))
     app.add_handler(CallbackQueryHandler(select_height, pattern="^height_"))
+app.add_handler(CallbackQueryHandler(handle_height_selection, pattern="^select_height_"))
     app.add_handler(CallbackQueryHandler(select_tubes, pattern="^tubes_"))
     app.add_handler(CallbackQueryHandler(handle_coating_selection, pattern="^coating_"))
     
