@@ -2012,36 +2012,37 @@ async def show_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    product_id = query.data.split("_")[1]
-    user_id = str(query.from_user.id)
-    
-    # Получаем продукт
-    product = None
-    for category in products.values():
-        for item in category:
-            if item['id'] == product_id:
-                product = item
+    try:
+        product_id = query.data.split('_')[1]  # Получаем ID из "desc_1_1"
+        
+        # Находим товар
+        product = None
+        for category in products.values():
+            for item in category:
+                if item['id'] == product_id:
+                    product = item
+                    break
+            if product:
                 break
-        if product:
-            break
-    
-    if not product:
-        await query.edit_message_text("Описание товара временно недоступно")
-        return
-    
-    # Формируем сообщение с описанием
-    message = f"📦 <b>{product['name']}</b>\n\n"
-    message += f"📝 <i>{product['description']}</i>"
-    
-    # Кнопка для возврата
-    keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(
-        message,
-        reply_markup=reply_markup,
-        parse_mode="HTML"
-    )
+
+        if not product or 'description' not in product:
+            await query.edit_message_text("Описание временно недоступно")
+            return
+
+        # Создаем кнопку "Назад"
+        keyboard = [
+            [InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]
+        ]
+        
+        await query.edit_message_text(
+            f"📦 <b>{product['name']}</b>\n\n{product['description']}",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="HTML"
+        )
+
+    except Exception as e:
+        logger.error(f"Ошибка в show_description: {e}")
+        await query.edit_message_text("Ошибка загрузки описания")
 
 async def select_specification(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
