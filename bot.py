@@ -2127,6 +2127,7 @@ async def select_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             "📏 Выберите высоту:",
             reply_markup=InlineKeyboardMarkup(keyboard)
+        )
             
     except Exception as e:
         logger.error(f"Ошибка в select_height: {str(e)}")
@@ -2138,8 +2139,9 @@ async def handle_height_selection(update: Update, context: ContextTypes.DEFAULT_
     
     try:
         # Формат callback_data: "select_height_2_6_Высота 600 мм"
-        *_, product_id, height = query.data.split('_')
-        product_id = '_'.join(product_id.split('_')[:2])  # На случай, если в height есть подчеркивания
+        parts = query.data.split('_')
+        product_id = '_'.join(parts[2:4])  # Получаем "2_6"
+        height = '_'.join(parts[4:])       # Получаем "Высота 600 мм"
         
         user_id = str(query.from_user.id)
         if user_id not in user_selections:
@@ -2147,7 +2149,7 @@ async def handle_height_selection(update: Update, context: ContextTypes.DEFAULT_
             
         # Сохраняем выбранную высоту
         user_selections[user_id]["selected_options"] = {
-            "Высота": height
+            "Высота": height.replace('_', ' ')  # Восстанавливаем пробелы
         }
         
         # Возвращаемся к товару
