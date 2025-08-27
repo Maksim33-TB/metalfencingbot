@@ -2089,46 +2089,36 @@ async def select_specification(update: Update, context: ContextTypes.DEFAULT_TYP
 async def select_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    
     try:
         product_id = '_'.join(query.data.split('_')[1:3])  # Получаем "2_6"
-        
         # Логирование для отладки
         logger.info(f"Запрошены высоты для товара: {product_id}")
-        
-        # Получаем спецификации товара
+
+        # Получаем данные спецификаций товара
         product_spec = product_specs.get(product_id, {})
-        if not product_spec:
-            logger.error(f"Нет спецификаций для товара {product_id}")
-            await query.answer("Для этого товара нет вариантов высоты")
-            return
-            
-        # Получаем доступные высоты из specs
-        heights = []
-        if 'specs' in product_spec:
-            heights = [h for h in product_spec['specs'].keys() if 'Высота' in h]
-        
+
+        # Проверяем есть ли высоты
+        heights = product_spec.get('height', [])
+
         if not heights:
-            # Альтернативный вариант, если высоты хранятся в product_spec
-            heights = product_spec.get('height', [])
-        
-        if not heights:
-            logger.error(f"Нет вариантов высоты для {product_id}")
-            await query.answer("Нет доступных вариантов высоты")
+            # Если высот нет, выводим сообщение
+            await query.edit_message_text("Для данной модели выбор высоты не предусмотрен")
             return
 
         # Создаем кнопки для выбора высоты
         keyboard = []
-        for height in heights:
-            keyboard.append([InlineKeyboardButton(height, callback_data=f"select_height_{product_id}_{height}")])
-        
+        for i, height in enumerate(heights):
+            keyboard.append([InlineKeyboardButton(height, callback_data=f"select_height_{product_id}_{i}")])
+
         keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
-        
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
         await query.edit_message_text(
             "📏 Выберите высоту:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=reply_markup
         )
-            
+
     except Exception as e:
         logger.error(f"Ошибка в select_height: {str(e)}")
         await query.answer("Ошибка загрузки вариантов высоты")
