@@ -1992,15 +1992,6 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif isinstance(product.get('price'), (int, float)):
             price_message = f"\n💰 Цена: {product['price']} руб./шт\n"
 
-        # Показываем выбранные опции, если они есть
-        if user_id in user_selections and "selected_options" in user_selections[user_id]:
-            selected_options = user_selections[user_id]["selected_options"]
-        if selected_options:
-            options_text = "\\n🔹 Выбрано: "
-        for option, value in selected_options.items():
-            options_text += f"{option}: {value}; "
-        message += options_text
-
         # Создаем кнопки
         buttons = [
             [InlineKeyboardButton("📝 Описание", callback_data=f"desc_{product_id}")],
@@ -2100,48 +2091,36 @@ async def select_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     try:
-        # Получаем полный ID вида "2_6" из "height_2_6"
-        product_id = '_'.join(query.data.split('_')[1:3])
+        product_id = '_'.join(query.data.split('_')[1:3])  # Получаем "2_6"
         
         # Логирование для отладки
         logger.info(f"Запрошены высоты для товара: {product_id}")
         
         # Получаем спецификации товара
         product_spec = product_specs.get(product_id, {})
-        
         if not product_spec:
             logger.error(f"Нет спецификаций для товара {product_id}")
             await query.answer("Для этого товара нет вариантов высоты")
             return
-        
-        # Получаем доступные высоты
+            
+        # Получаем доступные высоты из specs
         heights = []
-        
-        # Проверяем наличие высот в спецификациях
-        if 'specs' in product_spec and product_spec['specs']:
-            # Ищем варианты с "Высота" в названии
-            heights = [spec for spec in product_spec['specs'] if 'Высота' in spec]
-        
-        # Если не нашли в specs, проверяем отдельное поле height
-        if not heights and 'height' in product_spec and product_spec['height']:
-            heights = product_spec['height']
+        if 'specs' in product_spec:
+            heights = [h for h in product_spec['specs'].keys() if 'Высота' in h]
         
         if not heights:
-            logger.info(f"Нет вариантов высоты для {product_id}")
-            keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")]]
-            await query.edit_message_text(
-                "ℹ️ Для данной модели выбор высоты не предусмотрен",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-            return
+            # Альтернативный вариант, если высоты хранятся в product_spec
+            heights = product_spec.get('height', [])
         
+        if not heights:
+            logger.error(f"Нет вариантов высоты для {product_id}")
+            await query.answer("Нет доступных вариантов высоты")
+            return
+
         # Создаем кнопки для выбора высоты
         keyboard = []
         for height in heights:
-            # Заменяем пробелы на подчеркивания для callback_data
-            height_encoded = height.replace(' ', '_')
-            keyboard.append([InlineKeyboardButton(height, 
-                               callback_data=f"select_height_{product_id}_{height_encoded}")])
+            keyboard.append([InlineKeyboardButton(height, callback_data=f"select_height_{product_id}_{height}")])
         
         keyboard.append([InlineKeyboardButton("🔙 Назад", callback_data=f"prod_{product_id}")])
         
@@ -2149,7 +2128,7 @@ async def select_height(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📏 Выберите высоту:",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
-        
+            
     except Exception as e:
         logger.error(f"Ошибка в select_height: {str(e)}")
         await query.answer("Ошибка загрузки вариантов высоты")
@@ -2159,23 +2138,19 @@ async def handle_height_selection(update: Update, context: ContextTypes.DEFAULT_
     await query.answer()
     
     try:
-        # Формат callback_data: "select_height_2_6_Высота_600_мм"
+        # Формат callback_data: "select_height_2_6_Высота 600 мм"
         parts = query.data.split('_')
         product_id = '_'.join(parts[2:4])  # Получаем "2_6"
-        height_encoded = '_'.join(parts[4:])  # Получаем "Высота_600_мм"
-        
-        # Восстанавливаем пробелы
-        height = height_encoded.replace('_', ' ')
+        height = '_'.join(parts[4:])       # Получаем "Высота 600 мм"
         
         user_id = str(query.from_user.id)
-        
         if user_id not in user_selections:
             user_selections[user_id] = {}
-        if "selected_options" not in user_selections[user_id]:
-            user_selections[user_id]["selected_options"] = {}
-        
+            
         # Сохраняем выбранную высоту
-        user_selections[user_id]["selected_options"]["Высота"] = height
+        user_selections[user_id]["selected_options"] = {
+            "Высота": height.replace('_', ' ')  # Восстанавливаем пробелы
+        }
         
         # Возвращаемся к товару
         await show_product(update, context)
