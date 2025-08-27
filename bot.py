@@ -1993,10 +1993,10 @@ async def show_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
             price_message = f"\n💰 Цена: {product['price']} руб./шт\n"
 
         # Показываем выбранные опции, если они есть
-if user_id in user_selections and "selected_options" in user_selections[user_id]:
-    selected_options = user_selections[user_id]["selected_options"]
-    if selected_options:
-        options_text = "\\n🔹 Выбрано: "
+        if user_id in user_selections and "selected_options" in user_selections[user_id]:
+            selected_options = user_selections[user_id]["selected_options"]
+        if selected_options:
+            options_text = "\\n🔹 Выбрано: "
         for option, value in selected_options.items():
             options_text += f"{option}: {value}; "
         message += options_text
